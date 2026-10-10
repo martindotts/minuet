@@ -1,7 +1,7 @@
 {
   "name": "minuet",
   "displayName": "minuet",
-  "description": "Step-by-step debugging, explained: your AI agent turns breakpoints into a guided tour of any JavaScript/TypeScript flow, with the real values of the run.",
+  "description": "Step-by-step debugging, explained: your AI agent turns breakpoints into a guided tour of any code flow, with the real values of the run.",
   "version": "0.1.0",
   "publisher": "martindotts",
   "icon": "media/icon.png",
@@ -30,6 +30,9 @@
     "javascript",
     "typescript",
     "vitest",
+    "python",
+    "go",
+    "java",
     "ai",
     "agent",
     "claude",
@@ -470,7 +473,9 @@
     "lint": "eslint src",
     "compile-tests": "node -e \"require('fs').rmSync('out',{recursive:true,force:true})\" && tsc -p . --outDir out",
     "pretest": "npm run compile-tests && npm run compile",
-    "test": "vscode-test"
+    "test": "vscode-test --label js",
+    "pretest:python": "npm run compile-tests && npm run compile",
+    "test:python": "vscode-test --label python"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",

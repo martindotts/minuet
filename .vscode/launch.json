@@ -7,13 +7,25 @@
       "request": "launch",
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}",
-        "${workspaceFolder}/examples/sample-node"
+        "${workspaceFolder}/examples/${input:sample}"
       ],
       "outFiles": ["${workspaceFolder}/dist/**/*.js"],
       // Pass the shell PATH: when VS Code is opened from the Dock, the development host would
       // otherwise get the minimal macOS PATH and debug sessions cannot find `node`.
       "env": { "PATH": "${env:PATH}" },
       "preLaunchTask": "${defaultBuildTask}"
+    }
+  ],
+  "inputs": [
+    {
+      "id": "sample",
+      "type": "pickString",
+      "description": "Sample project to open in the development window",
+      "options": [
+        { "label": "Node.js (examples/sample-node)", "value": "sample-node" },
+        { "label": "Python (examples/sample-python)", "value": "sample-python" }
+      ],
+      "default": "sample-node"
     }
   ]
 }

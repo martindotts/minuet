@@ -5,19 +5,6 @@ import { Annotation } from './model';
 import { normalizeFsPath } from './paths';
 import { AnnotationStore } from './store';
 
-/** Debug types served by vscode-js-debug (and its legacy aliases). */
-export const JS_DEBUG_TYPES: ReadonlySet<string> = new Set([
-  'pwa-node',
-  'node',
-  'node-terminal',
-  'pwa-chrome',
-  'chrome',
-  'pwa-msedge',
-  'msedge',
-  'pwa-extensionHost',
-  'extensionHost',
-]);
-
 /** Client requests that resume execution, so the current step stops being valid. */
 const RESUME_COMMANDS: ReadonlySet<string> = new Set([
   'continue',
@@ -65,7 +52,8 @@ export interface ActiveStop {
 
 /**
  * A run starts with a top-level process session: a launch/attach without parent, or a process started
- * from a JavaScript Debug Terminal. Child sessions (workers, `node --test` files) belong to the same run.
+ * from a JavaScript Debug Terminal (whose own session only spawns them). Child sessions (vitest workers,
+ * `node --test` files, subprocesses) belong to the same run.
  */
 function isRunRoot(session: vscode.DebugSession): boolean {
   if (session.type === 'node-terminal') {
@@ -139,7 +127,7 @@ export class StopController implements vscode.Disposable {
     this.disposables.push(
       vscode.debug.onDidChangeActiveStackItem((item) => this.onActiveStackItem(item)),
       vscode.debug.registerDebugAdapterTrackerFactory('*', {
-        createDebugAdapterTracker: (session) => (JS_DEBUG_TYPES.has(session.type) ? this.createTracker(session) : undefined),
+        createDebugAdapterTracker: (session) => this.createTracker(session),
       }),
       vscode.debug.onDidStartDebugSession((session) => this.onSessionStart(session)),
       vscode.debug.onDidTerminateDebugSession((session) => this.onSessionEnd(session)),
@@ -154,7 +142,7 @@ export class StopController implements vscode.Disposable {
   }
 
   private onSessionStart(session: vscode.DebugSession): void {
-    if (JS_DEBUG_TYPES.has(session.type) && isRunRoot(session)) {
+    if (isRunRoot(session)) {
       this.runRootId = session.id;
       this.runHits = [];
     }
@@ -230,7 +218,7 @@ export class StopController implements vscode.Disposable {
   }
 
   private onActiveStackItem(item: vscode.DebugThread | vscode.DebugStackFrame | undefined): void {
-    if (!(item instanceof vscode.DebugStackFrame) || !JS_DEBUG_TYPES.has(item.session.type)) {
+    if (!(item instanceof vscode.DebugStackFrame)) {
       return;
     }
     this.cancelFallback(item.session);

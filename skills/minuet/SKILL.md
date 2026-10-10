@@ -1,12 +1,12 @@
 ---
 name: minuet
-description: Explain how a JavaScript/TypeScript code flow works with a step-by-step tour in the VS Code debugger (minuet extension), running the real code through an existing test or, if there is none, a temporary one. Use when the user asks to explain, understand or walk through a flow "with the debugger", "with minuet", "step by step with real values", or asks for a tour/walkthrough of the code.
+description: Explain how a code flow works with a step-by-step tour in the VS Code debugger (minuet extension), running the real code through an existing test or, if there is none, a temporary one. Works with any language VS Code can debug. Use when the user asks to explain, understand or walk through a flow "with the debugger", "with minuet", "step by step with real values", or asks for a tour/walkthrough of the code.
 ---
 
 # Tours with minuet
 
-minuet is a VS Code extension that adds annotations to the breakpoints of the JavaScript/TypeScript
-debugger. Each step of a tour is a breakpoint with a title, a markdown comment, highlighted ranges and
+minuet is a VS Code extension that adds annotations to the breakpoints of the VS Code debugger, in any language
+it can debug (JavaScript/TypeScript, Python, Go, Java, C#…). Each step of a tour is a breakpoint with a title, a markdown comment, highlighted ranges and
 expressions that are evaluated with the real values when execution stops there.
 
 Your job: understand the flow, find a **run** that goes through it (an existing test or, if there is none, a
@@ -20,25 +20,39 @@ and tell the user how to run it. The user runs it in their debugger.
 
 ## 2. What to run
 
-The extension stops in any run of the JS/TS debugger. Choose in this order:
+minuet stops in any debug session of VS Code. Choose in this order:
 
 1. **An existing test** that goes through the flow. This is the first choice: it already has mocks and
    fixtures, it represents a real case and it leaves nothing to clean up.
-   - Search by the entry point or the functions of the flow (`grep -rn "functionName" --include=*.test.*`).
-   - If the file has several tests, pick one and note its name so it can run alone (`-t "<name>"` in
-     vitest/jest); that way the debugger does not stop at the steps from other cases.
-   - **Run it once without the debugger** and confirm it goes through the path you need to explain. If it takes
-     a different branch, it is not useful.
+   - Search by the entry point or the functions of the flow.
+   - If the file has several tests, pick one and find out how to run it alone with this repository's test
+     runner; that way the debugger does not stop at the steps from other cases.
+   - **Run it once without the debugger**, the way this repository runs its tests, and confirm it goes through
+     the path you need to explain. If it takes a different branch, it is not useful.
 2. **A temporary test**, only if no existing test covers the path or a specific input is needed. Tell the user
    ("I did not find a test that goes through X, so I created a temporary one").
-   - Put it **next to the existing tests of the package**, so it picks up the same setup (vitest/jest, mocks,
-     in-memory database). Name: `<something>.tour.test.ts` (or `.js`), so it is easy to recognize and delete.
+   - Put it **next to the existing tests**, following their conventions, so it picks up the same setup (runner,
+     mocks, fixtures, in-memory database). Put `tour` in its name (for example `orders.tour.test.ts` or
+     `test_orders_tour.py`), so it is easy to recognize and delete.
    - Call the **real entry point** with a realistic input (event, request, object) that goes through the path.
      Reuse the repository's fixtures and helpers; do not mock the logic you want to show.
-   - **Run it once without the debugger** (`npx vitest run <file>`) and confirm it takes the expected path.
+   - **Run it once without the debugger** and confirm it takes the expected path.
    - **Do not modify existing tests** for this: if a different input is needed, write a new temporary test.
 3. **Another local run** (a script, the dev server), if the user prefers it or already has it running. In that
    case tell them what to do so the flow runs.
+
+How to run tests depends on the repository: read its configuration and scripts. What does not depend on it is
+that the run will be **paused at breakpoints inside VS Code's debugger**, which needs:
+
+- **No test timeout.** Disable it for this run (for example `--testTimeout=0` in vitest and jest, `--timeout 0`
+  in mocha, `-p no:timeout` with pytest-timeout); otherwise the runner kills the test while it is paused.
+- **One test, one process.** Run only the chosen test, without parallel workers or sharding, so the debugger
+  stops only where it should and does not miss child processes.
+- **VS Code's debugger, not a plain terminal.** Pick what fits the language: a debug terminal (*Debug:
+  JavaScript Debug Terminal* for Node.js), **Debug Test** in the Testing view or in the editor, or a launch
+  configuration in `.vscode/launch.json`.
+- **The language's debug extension installed** in VS Code (Python, Go, Java, C#…). If it is missing, tell the
+  user which one to install.
 
 ## 3. Tour (JSON)
 
@@ -80,15 +94,15 @@ Never overwrite a tour that is already there: they can be the user's or the team
 | `steps[].title` | yes | Short title. |
 | `steps[].comment` | no | Short markdown: what happens here and what to look at in the values. |
 | `steps[].highlights` | no | Ranges in the **same file**, `startLine`/`endLine` starting at 1 and inclusive; optional short `note`. |
-| `steps[].watches` | no | JavaScript expressions evaluated at that point. |
+| `steps[].watches` | no | Expressions in the program's language, evaluated at that point. |
 
 `//` comments are allowed in the JSON.
 
 ### Rules that get broken the most
 
 1. **The breakpoint goes on a statement in the body, not on the signature.** On `export const handler = async (event) => {`
-   execution stops when the *module loads*, not when the function is called, and `event` does not exist. Use
-   the first line of the body.
+   (or `def handler(event):`) execution stops when the *module loads*, not when the function is called, and
+   `event` does not exist. Use the first line of the body.
 2. **Execution stops before the line runs.** On `const total = compute(x);`, `total` does not exist yet and `x`
    does. To show `total`, put the step on the next line.
 3. **The order is the execution order.** If the line of step 1 calls a function that contains step 2, step 2
@@ -138,11 +152,8 @@ open tour reloads by itself, with no need to open the URI again.
 A short message with:
 
 - that they should accept opening the tour in VS Code,
-- the command to run the test **from a "JavaScript Debug Terminal"** (Command Palette → *Debug: JavaScript Debug
-  Terminal*), without a timeout because it will be paused at breakpoints:
-  - vitest: `npx vitest run <file> --testTimeout=0` (with `-t "<test name>"` if it is one of several)
-  - jest: `npx jest <file> --testTimeout=0` (with `-t "<test name>"` if it is one of several)
-  - node:test: `node --test <file>`
+- how to run the test under the debugger in this repository, with the timeout disabled and only that test (the
+  command for a debug terminal, the test to pick in the Testing view, or the launch configuration),
 - if it is an existing test, which one and why; if it is temporary, that you created it and where,
 - that they move forward with **F5** (Continue); each step is shown in the **Current Step** view (in Run and
   Debug),

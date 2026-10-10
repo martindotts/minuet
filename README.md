@@ -57,7 +57,8 @@
 - **Tours are plain files.** Each tour is a `.tour.json` in the `.minuet/` folder of the project. Commit it to
   share the walkthrough with your team, or keep it on your machine.
 
-You can also build tours by hand, share them as JSON, and use them with any JS/TS program or test runner.
+You can also build tours by hand, share them as JSON, and use them with any program or test runner you can debug
+in VS Code: JavaScript/TypeScript, Python, Go, Java, C# and more.
 
 ## How it works
 
@@ -73,8 +74,8 @@ When execution stops at an annotated breakpoint, the extension:
 - shows the step in the **Current Step** view: title, comment and the real value of each expression, evaluated
   against the current frame. Objects can be expanded.
 
-It is not a new debugger. Execution is the usual one (a program, a vitest/jest/mocha test, a
-"JavaScript Debug Terminal") and everything is built on the public VS Code API.
+It is not a new debugger. Execution is the usual one (a program, a test, a debug terminal), in whatever language
+VS Code can debug, and everything is built on the public VS Code API.
 
 ---
 
@@ -209,7 +210,7 @@ line highlights. Notes are shown at the end of the first line of the range, afte
 
 ### While debugging
 
-1. Run the program or the test with the usual JS/TS debugger.
+1. Run the program or the test with the usual debugger of its language.
 2. When execution stops at an annotated breakpoint:
    - the step's ranges are highlighted,
    - **Current Step** shows the step and evaluates its expressions with `evaluate` (`watch` context) against the
@@ -224,8 +225,15 @@ line highlights. Notes are shown at the end of the first line of the range, afte
    together with its child processes. Only the first stop at each step counts. Selecting another frame in the
    call stack does not count.
 
-It works with `vscode-js-debug` sessions: `node`/`pwa-node`, `chrome`/`pwa-chrome`, `msedge`, the JavaScript
-Debug Terminal and their child processes (vitest workers, `node --test`, etc.).
+It works with any debug session: minuet only uses the standard Debug Adapter Protocol requests (`stackTrace`,
+`evaluate`, `variables`), which every VS Code debugger supports. It is tested with JavaScript/TypeScript
+(`vscode-js-debug`: Node.js, Chrome, Edge, the JavaScript Debug Terminal and their child processes, such as
+vitest workers) and with Python (`debugpy`). In other languages, the debugger must report source files by
+absolute path, as most do.
+
+When a run is paused at breakpoints, the test runner's timeout must be off, or it kills the test (for example
+`--testTimeout=0` in vitest and jest, `--timeout 0` in mocha). Running a single test, without parallel workers,
+keeps the stops to the steps of that case.
 
 ---
 
@@ -330,7 +338,7 @@ Each step:
 | `title` | string | yes | Short step title. |
 | `comment` | string (markdown) | no | Explanation of the step. |
 | `highlights` | list | no | Ranges in the **same file**: `{ "startLine", "endLine", "note"? }`, starting at 1, `endLine` inclusive. |
-| `watches` | list of strings | no | JavaScript expressions evaluated in the stopped frame, with the same rules as the *Watch* view. |
+| `watches` | list of strings | no | Expressions in the program's language, evaluated in the stopped frame, with the same rules as the *Watch* view. |
 
 All lines in the file start at 1; internally they are stored starting at 0. `//` and `/* */` comments are
 allowed in the JSON.
@@ -405,10 +413,13 @@ Colors can be changed in `workbench.colorCustomizations`:
 `examples/sample-node` has a module (`src/orders.js`) that builds the notification text of an order, a test
 (`node --test`) and a 5-step tour (`.minuet/orders.tour.json`).
 
-1. Press **F5** in this project. A development window opens with the sample.
+1. Press **F5** in this project and pick **Node.js**. A development window opens with the sample.
 2. **Tours** → click *How the order notification text is built*.
 3. **Run and Debug** → *Debug: orders test*.
 4. Execution stops at each step. **Continue** (F5) moves to the next one.
+
+`examples/sample-python` has the same flow in Python (`orders.py`, a `unittest` test and its tour). To try it,
+press **F5** and pick **Python**; the Python extension must be installed in VS Code.
 
 ---
 
@@ -418,7 +429,8 @@ Colors can be changed in `workbench.colorCustomizations`:
 npm install
 npm run compile    # types + lint + bundle (dist/extension.js, dist/webview.js)
 npm run lint
-npm test           # unit and integration tests (includes a real debug session of the sample)
+npm test           # unit and integration tests (includes a real debug session of the Node.js sample)
+npm run test:python  # a real debugpy session of examples/sample-python (needs python3; installs the debugger)
 npm run package    # builds the .vsix
 ```
 
@@ -465,7 +477,6 @@ can happen when VS Code is opened from the Dock and Node was installed with fnm,
 
 - Recording a run to replay it without executing anything.
 - Headless execution.
-- Debuggers other than the JavaScript/TypeScript one.
 
 ---
 
