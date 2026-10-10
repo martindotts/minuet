@@ -137,9 +137,9 @@ suite('tourFormat: parsing', () => {
     assert.ok(errorsOf(validTour({ version: 2 })).some((e) => e.startsWith('version:')));
   });
 
-  test('rejects missing or empty steps', () => {
+  test('rejects missing steps; a new tour can have none yet', () => {
     assert.ok(errorsOf(validTour({ steps: undefined })).some((e) => e.startsWith('steps:')));
-    assert.ok(errorsOf(validTour({ steps: [] })).some((e) => e.startsWith('steps:')));
+    assert.ok(parseObject(validTour({ steps: [] })).ok);
   });
 
   test('names the failing field of each step', () => {

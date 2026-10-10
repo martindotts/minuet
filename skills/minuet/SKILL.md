@@ -10,8 +10,8 @@ debugger. Each step of a tour is a breakpoint with a title, a markdown comment, 
 expressions that are evaluated with the real values when execution stops there.
 
 Your job: understand the flow, find a **run** that goes through it (an existing test or, if there is none, a
-temporary one), write the **tour** as JSON, **import** it into VS Code and tell the user how to run it. The user
-runs it in their debugger.
+temporary one), write the **tour** as a JSON file in the repository's `.minuet/` folder, **open** it in VS Code
+and tell the user how to run it. The user runs it in their debugger.
 
 ## 1. Understand the flow
 
@@ -42,8 +42,12 @@ The extension stops in any run of the JS/TS debugger. Choose in this order:
 
 ## 3. Tour (JSON)
 
-Write it **outside the repository**, in the temporary directory (`/tmp/<name>.tour.json` or `$TMPDIR`). Use an
-absolute path without spaces or special characters.
+Tours are files in the **`.minuet/` folder at the repository root** (the folder open in VS Code):
+`.minuet/<name>.tour.json`, with a lowercase name made of words and hyphens taken from the title
+(`.minuet/order-confirmation-email.tour.json`). Create the folder if it does not exist. If the repository sets
+another folder in `minuet.toursFolder` (`.vscode/settings.json`), use that one.
+
+Never overwrite a tour that is already there: they can be the user's or the team's. Pick a new name.
 
 ```jsonc
 {
@@ -93,7 +97,7 @@ absolute path without spaces or special characters.
    objects are fine (`event.body`): they can be expanded in the view. Nothing with side effects.
 5. One step per line, and only on lines that actually run code (not comments, lone braces or blank lines).
 
-### Check before importing
+### Check before opening
 
 For each step, confirm the line is the one you think:
 
@@ -104,36 +108,36 @@ sed -n '42p' packages/orders/src/confirmationEmail.ts
 And that the JSON parses:
 
 ```bash
-node -e "JSON.parse(require('fs').readFileSync('/tmp/x.tour.json','utf8'))"
+node -e "JSON.parse(require('fs').readFileSync('.minuet/x.tour.json','utf8'))"
 ```
 
 (If you used `//` comments, this check fails; in that case leave the comments out.)
 
-## 4. Import
+## 4. Open
 
-Open the extension's URI with the **absolute**, URL-encoded path of the JSON:
+Open the extension's URI with the **absolute**, URL-encoded path of the tour file:
 
 ```bash
 # macOS
-open "vscode://martindotts.minuet/import?file=%2Ftmp%2Fx.tour.json"
+open "vscode://martindotts.minuet/open?file=%2Fpath%2Fto%2Frepo%2F.minuet%2Fx.tour.json"
 # Linux
-xdg-open "vscode://martindotts.minuet/import?file=%2Ftmp%2Fx.tour.json"
+xdg-open "vscode://martindotts.minuet/open?file=%2Fpath%2Fto%2Frepo%2F.minuet%2Fx.tour.json"
 # Windows (PowerShell)
-Start-Process "vscode://martindotts.minuet/import?file=C%3A%5CUsers%5C...%5Cx.tour.json"
+Start-Process "vscode://martindotts.minuet/open?file=C%3A%5Cpath%5Cto%5Crepo%5C.minuet%5Cx.tour.json"
 ```
 
-VS Code asks the user to confirm (Import, or Replace / Append if there is already a tour). If several VS Code
-windows are open, the URI goes to the one that last had focus: ask the user to bring the repository's window
-to the front.
+VS Code asks the user to confirm, then sets a breakpoint for each step. If several VS Code windows are open,
+the URI goes to the one that last had focus: ask the user to bring the repository's window to the front.
 
-If the user sees an import error, the message says which field failed (`steps[2].line: …`); fix it and open
-the URI again.
+If the user sees an error, the message says which field failed (`steps[2].line: …`); fix the file and open the
+URI again. Once the tour is open, VS Code follows its file: if you edit it again (to fix or add a step), the
+open tour reloads by itself, with no need to open the URI again.
 
 ## 5. Tell the user how to run it
 
 A short message with:
 
-- that they should accept the import in VS Code,
+- that they should accept opening the tour in VS Code,
 - the command to run the test **from a "JavaScript Debug Terminal"** (Command Palette → *Debug: JavaScript Debug
   Terminal*), without a timeout because it will be paused at breakpoints:
   - vitest: `npx vitest run <file> --testTimeout=0` (with `-t "<test name>"` if it is one of several)
@@ -151,9 +155,7 @@ flow is fine.
 
 When the user is done (or asks for it):
 
-- delete **only what you created**: the tour JSON and, if there was one, the temporary test. Existing tests are
-  not touched,
-- remind them that in VS Code they can run **minuet: Delete All Annotations** (it also offers to
-  delete the breakpoints).
-
-Annotations live in VS Code's state, not in the repository: there is nothing else to clean up.
+- delete the temporary test, if you created one. Existing tests are not touched,
+- ask whether to keep the tour. It is a file in `.minuet/`: committed, it lets the team walk the same flow; if
+  they do not want it, delete the file (VS Code closes the tour and removes its breakpoints),
+- **minuet: Close Tour** takes the tour out of VS Code (with its breakpoints) and keeps the file.

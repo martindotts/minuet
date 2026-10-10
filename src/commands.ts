@@ -1,10 +1,8 @@
 import { randomUUID } from 'crypto';
 import * as vscode from 'vscode';
 import { installAgentSkill } from './agentSkills';
-import { findBreakpointAt, findBreakpointById, newBreakpoint } from './breakpointSync';
+import { findBreakpointAt, newBreakpoint } from './breakpointSync';
 import { isInExecutionOrder, orderByExecution } from './executionOrder';
-import { exportTour, importTour } from './importExport';
-import { closeCurrentTour, openSavedTour, saveTour, TourLibrary } from './library';
 import { Annotation, Highlight, sortByOrder } from './model';
 import { toOneBased, toZeroBased } from './lines';
 import { openStep, selectionLines } from './navigation';
@@ -13,6 +11,7 @@ import { readLine, StaleTracker } from './staleTracker';
 import { STEP_VIEW_ID, StepView } from './stepView';
 import { StopController } from './stopController';
 import { AnnotationStore } from './store';
+import { TourEntry, Tours } from './tours';
 import { TourNode } from './tourView';
 
 export const CONTEXT_SCHEME = 'minuet';
@@ -25,7 +24,7 @@ interface Services {
   stops: StopController;
   selection: StepSelection;
   stepView: StepView;
-  library: TourLibrary;
+  tours: Tours;
 }
 
 interface Target {
@@ -156,6 +155,9 @@ async function annotateLine(services: Services, arg: unknown): Promise<void> {
   }
   if (target.uri.scheme !== 'file') {
     void vscode.window.showWarningMessage('Only files saved on disk can be annotated.');
+    return;
+  }
+  if (!(await services.tours.ensureOpen())) {
     return;
   }
   const uri = target.uri.toString();
@@ -410,33 +412,20 @@ async function deleteAnnotation(services: Services, arg: unknown): Promise<void>
   }
 }
 
-async function clearAll(services: Services): Promise<void> {
-  const { store } = services;
-  if (store.count() === 0 && !store.getMeta().title && !store.getMeta().context) {
-    void vscode.window.showInformationMessage('There are no annotations.');
-    return;
+/** A tour file addressed by a command argument (tree item or uri), or picked from the tours folder. */
+async function tourFromArg(tours: Tours, arg: unknown, placeHolder: string): Promise<vscode.Uri | undefined> {
+  if (arg instanceof vscode.Uri) {
+    return arg;
   }
-  const onlyAnnotations = 'Delete Annotations';
-  const withBreakpoints = 'Delete Annotations and Breakpoints';
-  const choice = await vscode.window.showWarningMessage(
-    `Delete the ${store.count()} annotations of the tour?`,
-    { modal: true, detail: 'This cannot be undone. To keep them, export the tour first.' },
-    onlyAnnotations,
-    withBreakpoints,
-  );
-  if (!choice) {
-    return;
+  if (typeof arg === 'object' && arg !== null && (arg as TourEntry).uri instanceof vscode.Uri) {
+    return (arg as TourEntry).uri;
   }
-  const breakpoints = store
-    .all()
-    .map((a) => findBreakpointById(a.breakpointId) ?? findBreakpointAt(a.location.uri, a.location.line))
-    .filter((bp): bp is vscode.SourceBreakpoint => bp !== undefined);
-  await store.replaceAll([]);
-  await store.setMeta({ title: '', context: '' });
-  await store.setSource(undefined);
-  if (choice === withBreakpoints && breakpoints.length > 0) {
-    vscode.debug.removeBreakpoints(breakpoints);
+  const items = tours.list.map((t) => ({ label: t.title, description: t.errors ? 'not valid' : `${t.steps} steps`, uri: t.uri }));
+  if (items.length === 0) {
+    void vscode.window.showInformationMessage('There are no tours yet. Create one with "minuet: New Tour".');
+    return undefined;
   }
+  return (await vscode.window.showQuickPick(items, { placeHolder }))?.uri;
 }
 
 async function moveStep(services: Services, arg: unknown, direction: -1 | 1): Promise<void> {
@@ -546,7 +535,7 @@ export function contextContentProvider(store: AnnotationStore): vscode.TextDocum
 }
 
 export function registerCommands(services: Services): vscode.Disposable[] {
-  const { store, staleTracker, stops, selection } = services;
+  const { store, stops, selection } = services;
   const register = (id: string, handler: (...args: unknown[]) => unknown): vscode.Disposable =>
     vscode.commands.registerCommand(`minuet.${id}`, handler);
 
@@ -558,24 +547,33 @@ export function registerCommands(services: Services): vscode.Disposable[] {
     register('deleteAnnotation', (arg) => deleteAnnotation(services, arg)),
     register('moveUp', (arg) => moveStep(services, arg, -1)),
     register('moveDown', (arg) => moveStep(services, arg, 1)),
-    register('importTour', (arg) => importTour(store, staleTracker, arg instanceof vscode.Uri ? arg : undefined)),
-    register('exportTour', () => exportTour(store)),
-    register('saveTour', (arg) =>
-      arg instanceof vscode.Uri ? saveTour(store, services.library, false, arg) : saveTour(store, services.library),
-    ),
-    register('saveTourAs', () => saveTour(store, services.library, true)),
+    register('newTour', () => services.tours.create()),
+    register('openTour', async (arg) => {
+      const uri = await tourFromArg(services.tours, arg, 'Open the tour…');
+      if (uri) {
+        await services.tours.open(uri);
+      }
+    }),
     register('closeTour', async () => {
-      if (store.count() === 0) {
+      if (!services.tours.activeFile) {
         void vscode.window.showInformationMessage('No tour is open.');
         return;
       }
-      await closeCurrentTour(store, services.library);
+      await services.tours.close();
     }),
-    register('openSavedTour', (arg) =>
-      arg instanceof vscode.Uri ? openSavedTour(store, staleTracker, services.library, arg) : undefined,
-    ),
-    register('refreshSavedTours', () => services.library.refresh()),
-    register('clearAll', () => clearAll(services)),
+    register('deleteTour', async (arg) => {
+      const uri = await tourFromArg(services.tours, arg, 'Delete the tour…');
+      if (uri) {
+        await services.tours.delete(uri);
+      }
+    }),
+    register('openTourFile', async (arg) => {
+      const uri = arg === undefined ? services.tours.activeFile : await tourFromArg(services.tours, arg, 'Open the file of the tour…');
+      if (uri) {
+        await vscode.window.showTextDocument(uri);
+      }
+    }),
+    register('refreshTours', () => services.tours.refresh()),
     register('orderByExecution', () => orderStepsByExecution(services)),
     stops.onDidFinishRun((hits) => void suggestExecutionOrder(services, hits)),
     register('openStep', async (arg) => {

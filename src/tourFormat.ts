@@ -147,9 +147,6 @@ export function validateTour(raw: unknown): ParseResult {
     fail('steps', 'must be a list of steps', raw.steps);
     return { ok: false, errors };
   }
-  if (raw.steps.length === 0) {
-    errors.push('steps: the list is empty; a tour needs at least one step.');
-  }
 
   const steps: TourFileStep[] = [];
   const seenOrders = new Map<number, number>();

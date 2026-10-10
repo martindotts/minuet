@@ -3,12 +3,12 @@ import { BreakpointSync } from './breakpointSync';
 import { StepCodeLensProvider } from './codeLens';
 import { CONTEXT_SCHEME, contextContentProvider, registerCommands } from './commands';
 import { StepDecorations } from './decorations';
-import { LibraryView, TourLibrary } from './library';
 import { StepSelection } from './selection';
 import { StaleTracker } from './staleTracker';
 import { StepView } from './stepView';
 import { StopController } from './stopController';
 import { AnnotationStore } from './store';
+import { Tours, ToursView } from './tours';
 import { TourView } from './tourView';
 import { MinuetUriHandler } from './uriHandler';
 
@@ -20,43 +20,51 @@ export interface MinuetApi {
   selection: StepSelection;
   stepView: StepView;
   decorations: StepDecorations;
-  library: TourLibrary;
+  tours: Tours;
 }
 
-export function activate(context: vscode.ExtensionContext): MinuetApi {
-  const store = new AnnotationStore(context.workspaceState);
-  const breakpointSync = new BreakpointSync(store);
+export async function activate(context: vscode.ExtensionContext): Promise<MinuetApi> {
+  const store = new AnnotationStore();
   const staleTracker = new StaleTracker(store);
+  const tours = new Tours(context.workspaceState, store, staleTracker);
+  const breakpointSync = new BreakpointSync(store, async () => {
+    await tours.close();
+    void vscode.window.showInformationMessage('All the breakpoints of the tour were removed, so it was closed. Its file is kept.');
+  });
   const stops = new StopController(store);
   const selection = new StepSelection(store, stops);
   const decorations = new StepDecorations(store, stops, selection);
-  const library = new TourLibrary(store);
-  const libraryView = new LibraryView(library);
-  const tourView = new TourView(store, staleTracker, stops, selection, () => library.isDirty());
+  const toursView = new ToursView(tours);
+  const tourView = new TourView(store, staleTracker, stops, selection, {
+    isOpen: () => tours.activeFile !== undefined,
+    onDidChange: tours.onDidChange,
+  });
   const stepView = new StepView(context.extensionUri, store, staleTracker, stops, selection);
   const codeLens = new StepCodeLensProvider(store, staleTracker);
   const contextProvider = contextContentProvider(store);
 
   context.subscriptions.push(
     store,
+    tours,
     breakpointSync,
     staleTracker,
     stops,
     selection,
     decorations,
-    library,
-    libraryView,
+    toursView,
     tourView,
     stepView,
     codeLens,
     contextProvider,
     vscode.workspace.registerTextDocumentContentProvider(CONTEXT_SCHEME, contextProvider),
-    vscode.window.registerUriHandler(new MinuetUriHandler(store, staleTracker)),
-    ...registerCommands({ extensionUri: context.extensionUri, store, staleTracker, stops, selection, stepView, library }),
+    vscode.window.registerUriHandler(new MinuetUriHandler(tours)),
+    ...registerCommands({ extensionUri: context.extensionUri, store, staleTracker, stops, selection, stepView, tours }),
   );
 
+  // The open tour must be loaded before the breakpoints are reconciled with it.
+  await tours.restore();
   breakpointSync.start();
-  return { store, staleTracker, stops, selection, stepView, decorations, library };
+  return { store, staleTracker, stops, selection, stepView, decorations, tours };
 }
 
 export function deactivate(): void {

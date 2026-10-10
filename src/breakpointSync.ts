@@ -47,7 +47,14 @@ export class BreakpointSync implements vscode.Disposable {
   private readonly disposables: vscode.Disposable[] = [];
   private queue: Promise<void> = Promise.resolve();
 
-  constructor(private readonly store: AnnotationStore) {}
+  constructor(
+    private readonly store: AnnotationStore,
+    /**
+     * Called instead of deleting the steps when every breakpoint of the tour is removed at once (for
+     * example with "Remove All Breakpoints"): that closes the tour rather than emptying its file.
+     */
+    private readonly onAllRemoved?: () => Promise<void>,
+  ) {}
 
   /**
    * The extension host receives the breakpoint list asynchronously after the first subscription, so
@@ -84,6 +91,11 @@ export class BreakpointSync implements vscode.Disposable {
       removed: toRefs(e.removed),
       changed: toRefs(e.changed),
     });
+    const count = this.store.count();
+    if (this.onAllRemoved && count > 1 && result.removedIds.length === count) {
+      await this.onAllRemoved();
+      return;
+    }
     if (result.changed) {
       await this.store.replaceAll(result.annotations);
     }

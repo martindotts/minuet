@@ -45,17 +45,17 @@
 
    > Explain with minuet how the order confirmation email is built
 
-4. **Run it.** Accept the import and start the test the agent picked in the debugger. Each stop shows the step,
+4. **Run it.** Accept opening the tour and start the test the agent picked in the debugger. Each stop shows the step,
    its explanation and the real values.
 
 ## Why minuet
 
 - **Your agent builds the tour.** It reads the code, picks the steps, finds (or writes) a test that runs the flow
-  and imports the tour into VS Code. You confirm once.
+  and saves the tour in `.minuet/`. VS Code opens it after you confirm.
 - **You run it for real.** Start the test in the debugger. At each step you see what happens, why it matters and
   the actual values, objects included.
-- **Nothing to set up in your repo.** Tours live in VS Code, like breakpoints. Nothing is written to the
-  repository unless you save the tour to share it with your team.
+- **Tours are plain files.** Each tour is a `.tour.json` in the `.minuet/` folder of the project. Commit it to
+  share the walkthrough with your team, or keep it on your machine.
 
 You can also build tours by hand, share them as JSON, and use them with any JS/TS program or test runner.
 
@@ -80,12 +80,12 @@ It is not a new debugger. Execution is the usual one (a program, a vitest/jest/m
 
 ## Using it with agents
 
-An agent can build the whole tour: it reads the code, decides what to run, writes the tour JSON and imports it
-into VS Code. To run the flow it first looks for an existing test that goes through it; if there is none, it
-creates a temporary one and tells you. You accept the import and run the test in the debugger.
+An agent can build the whole tour: it reads the code, decides what to run, writes the tour to `.minuet/` and
+opens it in VS Code. To run the flow it first looks for an existing test that goes through it; if there is none,
+it creates a temporary one and tells you. You accept opening the tour and run the test in the debugger.
 
 1. **Install the skill** (once): Command Palette → **minuet: Install Agent Skill**, or from the `…` menu of the
-   Tour panel. Pick the agents you use; the ones found on your machine come selected. It copies `SKILL.md` to
+   Steps view. Pick the agents you use; the ones found on your machine come selected. It copies `SKILL.md` to
    each agent's user-level skills folder, so it works in any repository. It contains the format, the rules of
    the guide for agents and the whole procedure. Agents pick it up in new sessions.
 
@@ -107,25 +107,25 @@ creates a temporary one and tells you. You accept the import and run the test in
    npx skills add martindotts/minuet -g
    ```
 2. **Ask the agent**, for example: *"Explain with minuet how the order confirmation email is built"*.
-3. **The agent imports the tour** by opening a URI of the extension. VS Code always asks you to confirm before
-   importing.
+3. **The agent opens the tour** through a URI of the extension. VS Code always asks you to confirm first. If the
+   agent edits the file later (to fix or add a step), the open tour reloads by itself.
 
-### Import URI
+### Open URI
 
 ```
-vscode://martindotts.minuet/import?file=<absolute, URL-encoded path of the JSON>
+vscode://martindotts.minuet/open?file=<absolute, URL-encoded path of the tour file>
 ```
 
 For example, from a terminal on macOS:
 
 ```bash
-open "vscode://martindotts.minuet/import?file=%2Ftmp%2Fmy.tour.json"
+open "vscode://martindotts.minuet/open?file=%2Fpath%2Fto%2Frepo%2F.minuet%2Fmy.tour.json"
 ```
 
 On Linux use `xdg-open`, on Windows `Start-Process`.
 
 - The path must be absolute. Step paths inside the JSON are resolved against the folder open in the window that
-  receives the URI.
+  receives the URI. A file outside the tours folder is copied into it, so tours always live in one place.
 - With several VS Code windows open, the URI goes to the one that last had focus.
 - The development window (F5) and an installation from the `.vsix` register the same URI. To try it with F5,
   keep the development window in front.
@@ -141,16 +141,17 @@ All commands are in the Command Palette (**minuet: …**). They are also in the 
 
 | Command | What it does |
 | --- | --- |
-| **Annotate Breakpoint on This Line** | Creates a breakpoint on the cursor line if there is none. Asks for a title and a comment. |
+| **Annotate Breakpoint on This Line** | Creates a breakpoint on the cursor line if there is none. Asks for a title and a comment. If no tour is open, asks which one to add the step to, or creates a new one. |
 | **Highlight Selection in Annotation…** | Adds the selected lines to an annotation in the same file. Suggests the nearest one above by default. Asks for an optional note. |
 | **Add Expression to Evaluate…** | Adds an expression to the step. If text is selected, it is used as the initial value. |
 | **Edit Annotation** | Changes the title, comment, order, expressions or highlights. If the step is outdated, it can be re-anchored. |
 | **Delete Annotation** | Deletes the annotation. The breakpoint is kept. |
 | **Order Steps by Last Run** | Renumbers the tour following the order in which the last run stopped at each step. Steps that did not run go to the end. Shows the new order before applying it. |
-| **Save Tour / Save Tour As…** | Writes the tour to the tours folder (`.minuet/`). See [Saved tours](#saved-tours). |
-| **Close Tour** | Removes the tour and the breakpoints of its steps from VS Code. Its saved file is kept. Offers to save unsaved changes first. |
-| **Import Tour… / Export Tour…** | See [Import and export](#import-and-export). |
-| **Delete All Annotations** | Asks whether to delete only the annotations or their breakpoints too. |
+| **New Tour…** | Asks for a title and creates `.minuet/<title>.tour.json`, empty, and opens it. |
+| **Open Tour…** | Opens a tour of the tours folder (also by clicking it in **Tours**, or right-clicking a `.tour.json` in the Explorer). A file from elsewhere is copied into the folder first. |
+| **Close Tour** | Takes the tour out of VS Code with the breakpoints of its steps. Its file is kept. |
+| **Delete Tour…** | Deletes the tour file (to the trash). |
+| **Open Tour File** | Opens the tour's JSON in the editor. |
 | **Install Agent Skill** | See [Using it with agents](#using-it-with-agents). |
 
 ### In the code
@@ -159,21 +160,21 @@ A CodeLens appears above each annotated line: `◆ Step 3 of 6 · title` (with �
 shows the step in **Current Step**, inside Run and Debug. When you go back to **Tour**, that step is selected.
 Placing the cursor on an annotated line also selects its step (turn it off with `minuet.followCursor`).
 
-### The "Tour" panel
+### The minuet panel
 
-The panel has its own icon in the Activity Bar. It shows:
+The panel has its own icon in the Activity Bar, with two views:
 
-- the tour **context**, if there is one (first node; click it to open it as markdown),
-- the steps **in order**: `1. title  file:line`,
-- a ⚠ icon on **outdated** steps,
-- during a session, the step where execution is **stopped**.
+- **Tours**: the `.tour.json` files of the tours folder. The open one is marked. Click a tour to open it (the
+  current one is closed first). ✕ closes it; the context menu opens its file or deletes it. The list follows
+  the folder: a tour copied there, committed by a teammate or written by an agent shows up by itself.
+- **Steps**: the open tour.
+  - the tour **context**, if there is one (first node; click it to open it as markdown),
+  - the steps **in order**: `1. title  file:line`,
+  - a ⚠ icon on **outdated** steps,
+  - during a session, the step where execution is **stopped**.
 
-Clicking a step opens the file at that line and shows it in Current Step. Step actions: move up, move down, edit
-and delete. Panel actions: save, close, save as, import, export, order by execution, delete all and install the
-agent skill. A ● next to the tour title means it has changes that are not saved.
-
-Below it, **Saved Tours** lists the tours of the tours folder. Click one to open it: the current tour is closed
-(offering to save it) and the saved one takes its place.
+  Clicking a step opens the file at that line and shows it in Current Step. Step actions: move up, move down,
+  edit and delete. View actions: close the tour, open its file, order by execution and install the agent skill.
 
 ### The "Current Step" view
 
@@ -266,33 +267,24 @@ Notes:
 
 ---
 
-## Saved tours
+## Tour files
 
-The tour you are working on lives in VS Code. To keep it, or to share it through git, save it:
+A tour is a `.tour.json` file in the tours folder: `.minuet/` at the root of the project, or the folder set in
+`minuet.toursFolder`. That folder is the only place tours live:
 
-- **Save Tour** writes it to `.minuet/<name>.tour.json` (the name comes from the title; you can change it).
-  Once saved, Save writes to the same file. The folder is set with `minuet.toursFolder`.
-- Changes are **not written until you save**, so the file in git only changes when you mean it. Breakpoints that
-  move as you edit code do not touch the file either.
-- **Saved Tours** lists every tour in the folder, including the ones your teammates commit. It refreshes when the
-  files change (for example after a `git pull`).
-- Opening a saved tour or closing the current one removes the breakpoints of the tour that leaves, so only the
-  open tour's breakpoints stop your debug sessions.
-- Importing a file that is inside the tours folder opens it as that saved tour. Importing any other file starts
-  a new, unsaved tour.
+- **To add a tour**, put its file in the folder: copy it, pull it from git, or let an agent write it. To share
+  one, commit it. To get rid of one, delete it.
+- **One tour is open at a time.** Opening it sets a breakpoint for each step; closing it (or opening another)
+  removes them, so only the open tour stops your debug sessions.
+- **Every change is written to the file right away**: a new step, an edited comment, a breakpoint that moves
+  when you edit the code above it. The tour stays in sync with the code it describes, and a commit that moves
+  code also updates its tours.
+- **Changes to the file are picked up.** If the open tour's file changes on disk (a `git pull`, an agent, a hand
+  edit), the tour reloads and its breakpoints follow. If the file is deleted, the tour is closed.
+- The first time the folder is created in a git repository, minuet asks whether to share the tours or keep them
+  local. Keeping them local adds the folder to `.git/info/exclude`, an ignore list that is not committed.
 
-Saved tours use the same JSON as [Import and export](#tour-file-format), so agents and people can also write them
-by hand.
-
-## Import and export
-
-- **Export Tour** saves all annotations to a JSON file chosen by the user. Paths are written relative to the
-  workspace folder.
-- **Import Tour** reads a JSON file (also available by right-clicking a `.json` file in the Explorer).
-  - Validates the whole file before changing anything.
-  - Resolves the paths against the workspace and creates the missing breakpoints.
-  - If there are annotations already, asks whether to **replace** them or **append** the new steps. Replacing
-    keeps the breakpoints of the previous annotations.
+When the extension rewrites a file, `//` comments in it are not kept.
 
 ### Tour file format
 
@@ -334,7 +326,7 @@ Each step:
 | `order` | integer ≥ 1 | yes | Position in the tour. Must be unique. Gaps (1, 2, 5) are renumbered. |
 | `file` | string | yes | Path **relative to the workspace folder**, with `/`. Absolute paths are accepted too. In multi-root workspaces it can start with the folder name. |
 | `line` | integer ≥ 1 | yes | Breakpoint line, **starting at 1** (as shown in the editor). One step per line. |
-| `anchorText` | string | recommended | Text of that line as it is in the file (compared without leading or trailing spaces, and with inner whitespace collapsed). If it does not match, the step is still imported and marked as outdated. If missing, the current text of the line is used. |
+| `anchorText` | string | recommended | Text of that line as it is in the file (compared without leading or trailing spaces, and with inner whitespace collapsed). If it does not match, the step is still opened and marked as outdated. If missing, the current text of the line is used. |
 | `title` | string | yes | Short step title. |
 | `comment` | string (markdown) | no | Explanation of the step. |
 | `highlights` | list | no | Ranges in the **same file**: `{ "startLine", "endLine", "note"? }`, starting at 1, `endLine` inclusive. |
@@ -343,7 +335,7 @@ Each step:
 All lines in the file start at 1; internally they are stored starting at 0. `//` and `/* */` comments are
 allowed in the JSON.
 
-If the file has errors, nothing is imported. The list of problems is shown with the exact field, for example:
+If the file has errors, the tour is not opened. The list of problems is shown with the exact field, for example:
 
 ```
 steps[2].line: must be an integer >= 1 (lines start at 1) (got 0).
@@ -372,11 +364,10 @@ A complete example is in `examples/sample-node/.minuet/orders.tour.json`.
 
 ---
 
-## Where annotations are stored
+## How steps follow breakpoints
 
-- The open tour lives in the extension's `workspaceState`: per workspace, on the user's machine, like
-  breakpoints. **Nothing is written to the repository** and nothing shows up in git, except the tours the user
-  saves (in `.minuet/`) or exports.
+- The tour's content lives only in its file (see [Tour files](#tour-files)). VS Code only remembers which tour
+  is open in each workspace.
 - Each annotation is linked to its breakpoint by file and line. Breakpoint ids change between sessions.
 - **Deleting the breakpoint deletes its annotation.** Deleting the annotation keeps the breakpoint.
 - If the breakpoint moves (for example, when lines are added above it), the annotation and its highlights move
@@ -384,6 +375,8 @@ A complete example is in `examples/sample-node/.minuet/orders.tour.json`.
 - If the text of the line no longer matches the annotated text, the step becomes **outdated**: it shows ⚠ in the
   panel, in the CodeLens and in Current Step, but it is not deleted. **Re-anchor** (in Current Step or in **Edit
   Annotation**) marks it as up to date again.
+- **Removing every breakpoint of the tour at once** (for example with *Remove All Breakpoints*) closes the tour
+  instead of deleting all its steps. The file is kept.
 - When VS Code starts, if an annotation has no breakpoint, the breakpoint is created again. VS Code delivers the
   breakpoint list to extensions asynchronously; deleting the annotation at that point could wipe the whole tour
   because of a startup race.
@@ -394,7 +387,7 @@ A complete example is in `examples/sample-node/.minuet/orders.tour.json`.
 
 | Setting | Default | Description |
 | --- | --- | --- |
-| `minuet.toursFolder` | `.minuet` | Folder for saved tours. Relative to the first workspace folder, or absolute. |
+| `minuet.toursFolder` | `.minuet` | Folder of the tours. Relative to the first workspace folder, or absolute. |
 | `minuet.showCodeLens` | `true` | Show `◆ Step N of M · title` above each annotated line. |
 | `minuet.followCursor` | `true` | Select a step when the cursor is placed on its line. |
 | `minuet.suggestExecutionOrder` | `true` | When a session ends, offer to reorder if execution went through the steps in a different order. |
@@ -410,10 +403,10 @@ Colors can be changed in `workbench.colorCustomizations`:
 ## Sample project
 
 `examples/sample-node` has a module (`src/orders.js`) that builds the notification text of an order, a test
-(`node --test`) and a 5-step saved tour (`.minuet/orders.tour.json`).
+(`node --test`) and a 5-step tour (`.minuet/orders.tour.json`).
 
 1. Press **F5** in this project. A development window opens with the sample.
-2. **Saved Tours** → click *How the order notification text is built*.
+2. **Tours** → click *How the order notification text is built*.
 3. **Run and Debug** → *Debug: orders test*.
 4. Execution stops at each step. **Continue** (F5) moves to the next one.
 
@@ -436,8 +429,8 @@ npm run package    # builds the .vsix
 | --- | --- |
 | `src/extension.ts` | Activation and wiring. |
 | `src/model.ts` | Data model. |
-| `src/store.ts` | Persistence in `workspaceState`. |
-| `src/tourFormat.ts` | Validation and conversion of the import/export JSON. |
+| `src/store.ts` | The open tour in memory. |
+| `src/tourFormat.ts` | Validation and conversion of the tour JSON. |
 | `src/paths.ts` | Paths relative to the workspace. |
 | `src/reconcile.ts` | Annotation ↔ breakpoint re-association (pure logic). |
 | `src/breakpointSync.ts` | Applies the re-association on breakpoint events. |
@@ -448,15 +441,14 @@ npm run package    # builds the .vsix
 | `src/decorations.ts` | Highlights and notes. |
 | `src/codeLens.ts` | CodeLens of each step. |
 | `src/selection.ts` | Selected step (panel, CodeLens, cursor or stop). |
-| `src/tourView.ts` | "Tour" panel. |
+| `src/tourView.ts` | "Steps" view. |
 | `src/stepState.ts` | What Current Step shows (pure logic). |
 | `src/stepView.ts` | "Current Step" view (extension side). |
 | `src/webview/` | "Current Step" view (webview script and message protocol). |
 | `src/navigation.ts` | Opening a step in the editor. |
-| `src/importExport.ts` | Import and export. |
-| `src/library.ts` | Saved tours: the tours folder, the "Saved Tours" view, save, close and open. |
+| `src/tours.ts` | Tour files: the tours folder, the "Tours" view, open, close, create, delete, write and reload. |
 | `src/commands.ts` | Commands. |
-| `src/uriHandler.ts` | `vscode://martindotts.minuet/import` URI. |
+| `src/uriHandler.ts` | `vscode://martindotts.minuet/open` URI. |
 | `src/agentSkills.ts` | Installs the skill for each agent. |
 | `skills/minuet/SKILL.md` | Agent skill installed by the command (also by `npx skills add`). |
 

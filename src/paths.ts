@@ -28,7 +28,7 @@ export function relativizePath(fsPath: string, folders: readonly FolderRef[]): s
 }
 
 /**
- * Resolves a path from an imported tour. Absolute paths are kept. In multi-root workspaces a leading
+ * Resolves a step path from a tour file. Absolute paths are kept. In multi-root workspaces a leading
  * segment equal to a folder name selects that folder; otherwise the first folder is used.
  * Returns undefined when the path is relative and there is no workspace folder.
  */
@@ -59,7 +59,7 @@ export function normalizeFsPath(p: string, platform: NodeJS.Platform = process.p
 export const DEFAULT_TOURS_FOLDER = '.minuet';
 
 /**
- * Folder where saved tours live: the `minuet.toursFolder` setting, relative to the first workspace
+ * Folder where tours live: the `minuet.toursFolder` setting, relative to the first workspace
  * folder unless absolute. Undefined when it is relative and no folder is open.
  */
 export function resolveToursFolder(setting: string | undefined, folders: readonly FolderRef[]): string | undefined {
@@ -78,7 +78,7 @@ export function isDirectlyIn(file: string, folder: string, platform: NodeJS.Plat
   return normalizeFsPath(path.dirname(file), platform) === normalizeFsPath(folder, platform);
 }
 
-/** File name (without extension) for a saved tour, from its title: "Cómo se arma" → "como-se-arma". */
+/** File name (without extension) for a new tour, from its title: "Cómo se arma" → "como-se-arma". */
 export function tourFileName(title: string): string {
   const slug = title
     .normalize('NFD')

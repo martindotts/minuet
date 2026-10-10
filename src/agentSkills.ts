@@ -81,7 +81,7 @@ async function pickTargets(): Promise<string[] | undefined> {
   return dirs;
 }
 
-/** Copies the bundled skill so coding agents know how to build and import tours, in any repository. */
+/** Copies the bundled skill so coding agents know how to build and open tours, in any repository. */
 export async function installAgentSkill(extensionUri: vscode.Uri): Promise<void> {
   const dirs = await pickTargets();
   if (!dirs) {

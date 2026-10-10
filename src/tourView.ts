@@ -39,13 +39,14 @@ export class TourView implements vscode.TreeDataProvider<TourNode>, vscode.Dispo
     private readonly staleTracker: StaleTracker,
     private readonly stops: StopController,
     private readonly selection: StepSelection,
-    /** Whether the tour has changes that are not saved to its file. */
-    private readonly isDirty: () => boolean = () => false,
+    /** Whether a tour is open (it can have no steps yet). */
+    private readonly tourOpen: { isOpen(): boolean; onDidChange: vscode.Event<void> },
   ) {
     this.treeView = vscode.window.createTreeView(VIEW_ID, { treeDataProvider: this });
     this.disposables.push(
       this.treeView,
       store.onDidChange(() => this.refresh()),
+      tourOpen.onDidChange(() => this.refresh()),
       staleTracker.onDidChange(() => this.refresh()),
       stops.onDidChange(() => this.refresh()),
       // Revealing shows the tree's container. Selections made from elsewhere (CodeLens, a stop) usually
@@ -73,9 +74,8 @@ export class TourView implements vscode.TreeDataProvider<TourNode>, vscode.Dispo
 
   private refresh(): void {
     const meta = this.store.getMeta();
-    const dirty = this.isDirty();
-    this.treeView.description = [meta.title, dirty ? '●' : ''].filter(Boolean).join(' ') || undefined;
-    void vscode.commands.executeCommand('setContext', 'minuet.hasTour', this.store.count() > 0);
+    this.treeView.description = meta.title || undefined;
+    void vscode.commands.executeCommand('setContext', 'minuet.hasTour', this.tourOpen.isOpen());
     const stop = this.stops.current;
     const annotation = stop ? this.store.get(stop.annotationId) : undefined;
     this.treeView.message = annotation ? `Stopped at step ${annotation.order}: ${annotation.title}` : undefined;

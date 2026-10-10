@@ -7,22 +7,22 @@ import { parseUriRequest } from '../uriHandler';
 
 const SKILL = path.resolve(__dirname, '../../skills/minuet/SKILL.md');
 
-suite('agents: import URI', () => {
-  test('parses an import request with an absolute file', () => {
+suite('agents: open URI', () => {
+  test('parses an open request with an absolute file', () => {
     // VS Code hands the query already percent-decoded.
-    assert.deepStrictEqual(parseUriRequest('/import', 'file=/tmp/x.tour.json'), {
-      action: 'import',
-      file: '/tmp/x.tour.json',
+    assert.deepStrictEqual(parseUriRequest('/open', 'file=/repo/.minuet/x.tour.json'), {
+      action: 'open',
+      file: '/repo/.minuet/x.tour.json',
     });
   });
 
   test('accepts a trailing slash in the action', () => {
-    assert.deepStrictEqual(parseUriRequest('/import/', 'file=/tmp/x.json'), { action: 'import', file: '/tmp/x.json' });
+    assert.deepStrictEqual(parseUriRequest('/open/', 'file=/tmp/x.json'), { action: 'open', file: '/tmp/x.json' });
   });
 
   test('rejects a missing or relative file', () => {
-    assert.match((parseUriRequest('/import', '') as { error: string }).error, /needs "file"/);
-    assert.match((parseUriRequest('/import', 'file=tmp/x.json') as { error: string }).error, /absolute path/);
+    assert.match((parseUriRequest('/open', '') as { error: string }).error, /needs "file"/);
+    assert.match((parseUriRequest('/open', 'file=tmp/x.json') as { error: string }).error, /absolute path/);
   });
 
   test('rejects unknown actions', () => {
@@ -47,11 +47,11 @@ suite('agents: skill', () => {
     assert.ok(result.ok, result.ok ? '' : result.errors.join('\n'));
   });
 
-  test('documents the import URI the extension handles', () => {
-    const uri = /vscode:\/\/martindotts\.minuet\/import\?file=([^"\s]+)/.exec(text);
-    assert.ok(uri, 'import URI in the skill');
-    const request = parseUriRequest('/import', `file=${decodeURIComponent(uri[1])}`);
-    assert.deepStrictEqual(request, { action: 'import', file: '/tmp/x.tour.json' });
+  test('documents the open URI the extension handles', () => {
+    const uri = /vscode:\/\/martindotts\.minuet\/open\?file=([^"\s]+)/.exec(text);
+    assert.ok(uri, 'open URI in the skill');
+    const request = parseUriRequest('/open', `file=${decodeURIComponent(uri[1])}`);
+    assert.ok('file' in request && request.file.endsWith('.minuet/x.tour.json'), JSON.stringify(request));
   });
 
   test('is installed in each agent skills folder under the minuet name', () => {
