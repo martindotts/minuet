@@ -20,7 +20,7 @@
 <p align="center">
   <a href="#quick-start">Quick start</a> ·
   <a href="#how-it-works">How it works</a> ·
-  <a href="#using-it-with-agents-claude-code">Agents</a> ·
+  <a href="#using-it-with-agents">Agents</a> ·
   <a href="#tour-file-format">Tour format</a> ·
   <a href="https://github.com/martindotts/minuet/releases">Releases</a>
 </p>
@@ -38,7 +38,8 @@
 
    Or in VS Code: **Extensions → … → Install from VSIX…** Requires VS Code 1.90 or later.
 
-2. **Install the Claude Code skill** (once): Command Palette → **minuet: Install Claude Code Skill**.
+2. **Install the agent skill** (once): Command Palette → **minuet: Install Agent Skill**. Works with Claude Code,
+   Codex, Cursor, GitHub Copilot, Gemini CLI and any agent that supports [Agent Skills](https://agentskills.io).
 
 3. **Ask your agent:**
 
@@ -77,16 +78,34 @@ It is not a new debugger. Execution is the usual one (a program, a vitest/jest/m
 
 ---
 
-## Using it with agents (Claude Code)
+## Using it with agents
 
 An agent can build the whole tour: it reads the code, decides what to run, writes the tour JSON and imports it
 into VS Code. To run the flow it first looks for an existing test that goes through it; if there is none, it
 creates a temporary one and tells you. You accept the import and run the test in the debugger.
 
-1. **Install the skill** (once): Command Palette → **minuet: Install Claude Code Skill**, or from the
-   `…` menu of the Tour panel. It copies `SKILL.md` to `~/.claude/skills/minuet/`, so it works in any
-   repository. It contains the format, the rules of the guide for agents and the whole procedure. Claude Code
-   picks it up in new sessions.
+1. **Install the skill** (once): Command Palette → **minuet: Install Agent Skill**, or from the `…` menu of the
+   Tour panel. Pick the agents you use; the ones found on your machine come selected. It copies `SKILL.md` to
+   each agent's user-level skills folder, so it works in any repository. It contains the format, the rules of
+   the guide for agents and the whole procedure. Agents pick it up in new sessions.
+
+   | Agent | Folder |
+   | --- | --- |
+   | Claude Code | `~/.claude/skills/minuet/` |
+   | Codex, Cline, Zed, Warp | `~/.agents/skills/minuet/` |
+   | Cursor | `~/.cursor/skills/minuet/` |
+   | GitHub Copilot | `~/.copilot/skills/minuet/` |
+   | Gemini CLI | `~/.gemini/skills/minuet/` |
+   | Antigravity | `~/.gemini/antigravity/skills/minuet/` |
+   | Windsurf | `~/.codeium/windsurf/skills/minuet/` |
+   | OpenCode | `~/.config/opencode/skills/minuet/` |
+
+   For any other agent, choose **Other agent…** and pick its skills folder, or use the
+   [`skills`](https://github.com/vercel-labs/skills) CLI, which knows about 70+ agents:
+
+   ```bash
+   npx skills add martindotts/minuet -g
+   ```
 2. **Ask the agent**, for example: *"Explain with minuet how the order confirmation email is built"*.
 3. **The agent imports the tour** by opening a URI of the extension. VS Code always asks you to confirm before
    importing.
@@ -130,7 +149,7 @@ All commands are in the Command Palette (**minuet: …**). They are also in the 
 | **Order Steps by Last Run** | Renumbers the tour following the order in which the last run stopped at each step. Steps that did not run go to the end. Shows the new order before applying it. |
 | **Import Tour… / Export Tour…** | See [Import and export](#import-and-export). |
 | **Delete All Annotations** | Asks whether to delete only the annotations or their breakpoints too. |
-| **Install Claude Code Skill** | See [Using it with agents](#using-it-with-agents-claude-code). |
+| **Install Agent Skill** | See [Using it with agents](#using-it-with-agents). |
 
 ### In the code
 
@@ -148,7 +167,7 @@ The panel has its own icon in the Activity Bar. It shows:
 - during a session, the step where execution is **stopped**.
 
 Clicking a step opens the file at that line and shows it in Current Step. Step actions: move up, move down, edit
-and delete. Panel actions: import, export, order by execution, delete all and install the Claude Code skill.
+and delete. Panel actions: import, export, order by execution, delete all and install the agent skill.
 
 ### The "Current Step" view
 
@@ -411,7 +430,8 @@ npm run package    # builds the .vsix
 | `src/importExport.ts` | Import and export. |
 | `src/commands.ts` | Commands. |
 | `src/uriHandler.ts` | `vscode://martindotts.minuet/import` URI. |
-| `resources/claude-skill/SKILL.md` | Claude Code skill installed by the command. |
+| `src/agentSkills.ts` | Installs the skill for each agent. |
+| `skills/minuet/SKILL.md` | Agent skill installed by the command (also by `npx skills add`). |
 
 </details>
 

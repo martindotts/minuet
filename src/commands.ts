@@ -1,7 +1,6 @@
 import { randomUUID } from 'crypto';
-import * as os from 'os';
-import * as path from 'path';
 import * as vscode from 'vscode';
+import { installAgentSkill } from './agentSkills';
 import { findBreakpointAt, findBreakpointById, newBreakpoint } from './breakpointSync';
 import { isInExecutionOrder, orderByExecution } from './executionOrder';
 import { exportTour, importTour } from './importExport';
@@ -514,50 +513,6 @@ async function suggestExecutionOrder(services: Services, hits: string[]): Promis
   }
 }
 
-/** Where Claude Code looks for user-level skills. */
-export function claudeSkillDir(home = os.homedir()): string {
-  return path.join(home, '.claude', 'skills', 'minuet');
-}
-
-/** Copies the bundled skill so Claude Code knows how to build and import tours, in any repository. */
-async function installClaudeSkill(extensionUri: vscode.Uri): Promise<void> {
-  const source = vscode.Uri.joinPath(extensionUri, 'resources', 'claude-skill', 'SKILL.md');
-  const dir = vscode.Uri.file(claudeSkillDir());
-  const target = vscode.Uri.joinPath(dir, 'SKILL.md');
-  const content = await vscode.workspace.fs.readFile(source);
-  let existing: Uint8Array | undefined;
-  try {
-    existing = await vscode.workspace.fs.readFile(target);
-  } catch {
-    existing = undefined;
-  }
-  if (existing && Buffer.from(existing).equals(Buffer.from(content))) {
-    void vscode.window.showInformationMessage('The Claude Code skill is already installed and up to date.');
-    return;
-  }
-  if (existing) {
-    const replace = 'Replace';
-    const choice = await vscode.window.showWarningMessage(
-      'A "minuet" skill with different content is already installed.',
-      { modal: true, detail: `${target.fsPath}\n\nIt will be replaced with the version bundled with the extension.` },
-      replace,
-    );
-    if (choice !== replace) {
-      return;
-    }
-  }
-  await vscode.workspace.fs.createDirectory(dir);
-  await vscode.workspace.fs.writeFile(target, content);
-  const open = 'Open';
-  const choice = await vscode.window.showInformationMessage(
-    `Skill installed in ${target.fsPath.replace(os.homedir(), '~')}. Claude Code uses it when you ask it to explain a flow with the debugger (in new sessions).`,
-    open,
-  );
-  if (choice === open) {
-    await vscode.window.showTextDocument(target);
-  }
-}
-
 async function showContext(store: AnnotationStore): Promise<void> {
   const meta = store.getMeta();
   if (!meta.context.trim()) {
@@ -620,6 +575,6 @@ export function registerCommands(services: Services): vscode.Disposable[] {
       }
     }),
     register('showContext', () => showContext(store)),
-    register('installClaudeSkill', () => installClaudeSkill(services.extensionUri)),
+    register('installAgentSkill', () => installAgentSkill(services.extensionUri)),
   ];
 }

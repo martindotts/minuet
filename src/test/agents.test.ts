@@ -1,11 +1,11 @@
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
-import { claudeSkillDir } from '../commands';
+import { AGENTS, isDetected, skillDir } from '../agentSkills';
 import { parseTourJson } from '../tourFormat';
 import { parseUriRequest } from '../uriHandler';
 
-const SKILL = path.resolve(__dirname, '../../resources/claude-skill/SKILL.md');
+const SKILL = path.resolve(__dirname, '../../skills/minuet/SKILL.md');
 
 suite('agents: import URI', () => {
   test('parses an import request with an absolute file', () => {
@@ -30,10 +30,10 @@ suite('agents: import URI', () => {
   });
 });
 
-suite('agents: Claude Code skill', () => {
+suite('agents: skill', () => {
   const text = fs.readFileSync(SKILL, 'utf8');
 
-  test('has the frontmatter Claude Code needs', () => {
+  test('has the Agent Skills frontmatter', () => {
     const match = /^---\n([\s\S]*?)\n---\n/.exec(text);
     assert.ok(match, 'frontmatter block');
     assert.match(match[1], /^name: minuet$/m);
@@ -54,7 +54,18 @@ suite('agents: Claude Code skill', () => {
     assert.deepStrictEqual(request, { action: 'import', file: '/tmp/x.tour.json' });
   });
 
-  test('is installed under ~/.claude/skills/minuet', () => {
-    assert.strictEqual(claudeSkillDir('/home/u'), path.join('/home/u', '.claude', 'skills', 'minuet'));
+  test('is installed in each agent skills folder under the minuet name', () => {
+    const claude = AGENTS.find((agent) => agent.label === 'Claude Code');
+    assert.ok(claude);
+    assert.strictEqual(skillDir(claude, '/home/u'), path.join('/home/u', '.claude', 'skills', 'minuet'));
+    const dirs = AGENTS.map((agent) => skillDir(agent, '/home/u'));
+    assert.strictEqual(new Set(dirs).size, dirs.length, 'no two agents share a folder');
+  });
+
+  test('detects an agent by any of its folders', () => {
+    const codex = AGENTS.find((agent) => agent.skillsDir === '.agents/skills');
+    assert.ok(codex);
+    assert.ok(isDetected(codex, '/home/u', (p) => p === path.join('/home/u', '.codex')));
+    assert.ok(!isDetected(codex, '/home/u', () => false));
   });
 });

@@ -33,6 +33,10 @@
     "ai",
     "agent",
     "claude",
+    "codex",
+    "copilot",
+    "cursor",
+    "agent-skills",
     "explain"
   ],
   "engines": {
@@ -110,8 +114,8 @@
         "icon": "$(clear-all)"
       },
       {
-        "command": "minuet.installClaudeSkill",
-        "title": "Install Claude Code Skill",
+        "command": "minuet.installAgentSkill",
+        "title": "Install Agent Skill",
         "category": "minuet",
         "icon": "$(sparkle)"
       },
@@ -251,7 +255,7 @@
           "when": "view == minuet.tour"
         },
         {
-          "command": "minuet.installClaudeSkill",
+          "command": "minuet.installAgentSkill",
           "group": "y_agents@1",
           "when": "view == minuet.tour"
         }
