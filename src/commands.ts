@@ -3,20 +3,17 @@ import * as vscode from 'vscode';
 import { installAgentSkill } from './agents/agentSkills';
 import { isInExecutionOrder, orderByExecution } from './core/executionOrder';
 import { toOneBased, toZeroBased } from './core/lines';
-import { Step, contentText, Highlight, isFileContent, sortByOrder } from './core/model';
+import { Highlight, isFileContent, sortByOrder, Step } from './core/model';
 import { findBreakpointAt, newBreakpoint } from './debug/breakpointSync';
 import { StopController } from './debug/stopController';
 import { readLine, StaleTracker } from './tours/staleTracker';
 import { StepStore } from './tours/stepStore';
-import { TourEntry, Tours } from './tours/tours';
+import { Tours } from './tours/tours';
 import { CURRENT_STEP_VIEW_ID, CurrentStepView } from './views/currentStep/currentStepView';
 import { openStep, selectionLines } from './views/navigation';
 import { StepSelection } from './views/selection';
 import { StepPage } from './views/stepPage';
-import { StepsNode } from './views/stepsView';
-
-export const CONTEXT_SCHEME = 'minuet';
-const CONTEXT_URI = vscode.Uri.from({ scheme: CONTEXT_SCHEME, path: '/Tour context.md' });
+import { TourNode } from './views/toursView';
 
 interface Services {
   extensionUri: vscode.Uri;
@@ -52,8 +49,8 @@ function toUri(uri: LineNumberArg['uri']): vscode.Uri {
   return uri instanceof vscode.Uri ? uri : vscode.Uri.from(uri);
 }
 
-function isStepNode(arg: unknown): arg is Extract<StepsNode, { kind: 'step' }> {
-  return typeof arg === 'object' && arg !== null && (arg as StepsNode).kind === 'step';
+function isStepNode(arg: unknown): arg is Extract<TourNode, { kind: 'step' }> {
+  return typeof arg === 'object' && arg !== null && (arg as TourNode).kind === 'step';
 }
 
 /** Line targeted by a command: gutter menu, editor menu (uri) or the active editor's cursor. */
@@ -421,8 +418,8 @@ async function tourFromArg(tours: Tours, arg: unknown, placeHolder: string): Pro
   if (arg instanceof vscode.Uri) {
     return arg;
   }
-  if (typeof arg === 'object' && arg !== null && (arg as TourEntry).uri instanceof vscode.Uri) {
-    return (arg as TourEntry).uri;
+  if (typeof arg === 'object' && arg !== null && (arg as TourNode).kind === 'tour') {
+    return (arg as Extract<TourNode, { kind: 'tour' }>).tour.uri;
   }
   const items = tours.list.map((t) => ({ label: t.title, description: t.errors ? 'not valid' : `${t.steps} steps`, uri: t.uri }));
   if (items.length === 0) {
@@ -509,37 +506,14 @@ async function suggestExecutionOrder(services: Services, hits: string[]): Promis
   }
 }
 
-async function showContext(store: StepStore, page: StepPage): Promise<void> {
-  const meta = store.getMeta();
-  if (isFileContent(meta.context)) {
-    await page.showContext();
-    return;
+/** Shows the open tour's context in the Step Page tab. Returns false when the tour has none. */
+async function showContext(store: StepStore, page: StepPage): Promise<boolean> {
+  const context = store.getMeta().context;
+  if (!isFileContent(context) && !context.trim()) {
+    return false;
   }
-  if (!meta.context.trim()) {
-    return;
-  }
-  try {
-    await vscode.commands.executeCommand('markdown.showPreview', CONTEXT_URI);
-  } catch {
-    await vscode.window.showTextDocument(CONTEXT_URI, { preview: true });
-  }
-}
-
-/** Read-only virtual document with the tour context, used by the markdown preview. */
-export function contextContentProvider(store: StepStore): vscode.TextDocumentContentProvider & vscode.Disposable {
-  const emitter = new vscode.EventEmitter<vscode.Uri>();
-  const subscription = store.onDidChange(() => emitter.fire(CONTEXT_URI));
-  return {
-    onDidChange: emitter.event,
-    provideTextDocumentContent: () => {
-      const meta = store.getMeta();
-      return `# ${meta.title || 'Tour context'}\n\n${contentText(meta.context)}\n`;
-    },
-    dispose: () => {
-      subscription.dispose();
-      emitter.dispose();
-    },
-  };
+  await page.showContext();
+  return true;
 }
 
 export function registerCommands(services: Services): vscode.Disposable[] {
@@ -558,8 +532,9 @@ export function registerCommands(services: Services): vscode.Disposable[] {
     register('newTour', () => services.tours.create()),
     register('openTour', async (arg) => {
       const uri = await tourFromArg(services.tours, arg, 'Open the tour…');
-      if (uri) {
-        await services.tours.open(uri);
+      // Opening a tour (or clicking the open one) shows its context.
+      if (uri && (await services.tours.open(uri))) {
+        await showContext(store, services.page);
       }
     }),
     register('closeTour', async () => {

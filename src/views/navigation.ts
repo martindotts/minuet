@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import { toOneBased } from '../core/lines';
 import { Step } from '../core/model';
 
 /** Opens the step's file with the cursor on its breakpoint line. */
@@ -32,9 +31,4 @@ export async function revealLines(step: Step, startLine: number, endLine: number
   const range = new vscode.Range(startLine, 0, end, editor.document.lineAt(end).text.length);
   editor.selection = new vscode.Selection(range.start, range.end);
   editor.revealRange(range, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
-}
-
-/** "src/orders.js:14" */
-export function stepLocation(step: Step): string {
-  return `${vscode.workspace.asRelativePath(vscode.Uri.parse(step.location.uri))}:${toOneBased(step.location.line)}`;
 }

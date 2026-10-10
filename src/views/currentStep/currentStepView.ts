@@ -6,7 +6,7 @@ import { StopController } from '../../debug/stopController';
 import { readLine, StaleTracker } from '../../tours/staleTracker';
 import { StepStore } from '../../tours/stepStore';
 import { Tours } from '../../tours/tours';
-import { openStep, revealLines, selectionLines, stepLocation } from '../navigation';
+import { openStep, revealLines, selectionLines } from '../navigation';
 import { StepSelection } from '../selection';
 import { StepPage } from '../stepPage';
 import { FromWebview, StepViewState, ToWebview, VariableView } from './protocol';
@@ -110,7 +110,6 @@ export class CurrentStepView implements vscode.WebviewViewProvider, vscode.Dispo
       stop: stop && { stepId: stop.stepId, watches: stop.watches, generation: stop.generation },
       inSession: vscode.debug.activeDebugSession !== undefined,
       isStale: (id) => this.staleTracker.isStale(id),
-      location: stepLocation,
       content,
     });
     this.lastState = state;
@@ -193,13 +192,6 @@ export class CurrentStepView implements vscode.WebviewViewProvider, vscode.Dispo
         this.ready = true;
         await this.refresh();
         return;
-      case 'open': {
-        const step = this.shownStep();
-        if (step) {
-          await openStep(step);
-        }
-        return;
-      }
       case 'prev':
       case 'next': {
         const current = this.shownStep();

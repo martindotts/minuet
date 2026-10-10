@@ -25,7 +25,6 @@ export interface StepStateInput {
   /** A debug session is active (running or stopped anywhere). */
   inSession: boolean;
   isStale: (id: string) => boolean;
-  location: (step: Step) => string;
   content: ContentView;
 }
 
@@ -64,7 +63,6 @@ export function buildStepState(input: StepStateInput): StepViewState {
     contentFile: input.content.file,
     contentPage: input.content.page,
     contentError: input.content.error,
-    location: input.location(shown),
     stale: input.isStale(shown.id),
     anchorText: shown.anchorText,
     highlights: highlightsToFile(shown.highlights),

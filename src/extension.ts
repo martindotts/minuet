@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { MinuetUriHandler } from './agents/uriHandler';
-import { CONTEXT_SCHEME, contextContentProvider, registerCommands } from './commands';
+import { registerCommands } from './commands';
 import { BreakpointSync } from './debug/breakpointSync';
 import { StopController } from './debug/stopController';
 import { StaleTracker } from './tours/staleTracker';
@@ -11,7 +11,6 @@ import { CurrentStepView } from './views/currentStep/currentStepView';
 import { StepDecorations } from './views/decorations';
 import { StepSelection } from './views/selection';
 import { StepPage } from './views/stepPage';
-import { StepsView } from './views/stepsView';
 import { ToursView } from './views/toursView';
 
 /** Returned from activate(); used by the integration tests. */
@@ -37,15 +36,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<Minuet
   const stops = new StopController(store);
   const selection = new StepSelection(store, stops);
   const decorations = new StepDecorations(store, stops, selection);
-  const toursView = new ToursView(tours);
-  const stepsView = new StepsView(store, staleTracker, stops, selection, {
-    isOpen: () => tours.activeFile !== undefined,
-    onDidChange: tours.onDidChange,
-  });
+  const toursView = new ToursView(tours, store, staleTracker, stops, selection);
   const page = new StepPage(store, tours, stops, selection);
   const currentStepView = new CurrentStepView(context.extensionUri, store, staleTracker, stops, selection, tours, page);
   const codeLens = new StepCodeLensProvider(store, staleTracker);
-  const contextProvider = contextContentProvider(store);
 
   context.subscriptions.push(
     store,
@@ -56,12 +50,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<Minuet
     selection,
     decorations,
     toursView,
-    stepsView,
     page,
     currentStepView,
     codeLens,
-    contextProvider,
-    vscode.workspace.registerTextDocumentContentProvider(CONTEXT_SCHEME, contextProvider),
     vscode.window.registerUriHandler(new MinuetUriHandler(tours)),
     ...registerCommands({ extensionUri: context.extensionUri, store, staleTracker, stops, selection, currentStepView, tours, page }),
   );

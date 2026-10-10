@@ -271,70 +271,70 @@
         },
         {
           "command": "minuet.closeTour",
-          "group": "navigation@1",
-          "when": "view == minuet.steps && minuet.hasTour"
+          "group": "1_tour@1",
+          "when": "view == minuet.tours && minuet.hasTour"
         },
         {
           "command": "minuet.openTourFile",
-          "group": "1_tour@1",
-          "when": "view == minuet.steps && minuet.hasTour"
+          "group": "1_tour@2",
+          "when": "view == minuet.tours && minuet.hasTour"
         },
         {
           "command": "minuet.orderByExecution",
-          "group": "1_order@1",
-          "when": "view == minuet.steps && minuet.hasTour"
+          "group": "2_order@1",
+          "when": "view == minuet.tours && minuet.hasTour"
         },
         {
           "command": "minuet.installAgentSkill",
           "group": "y_agents@1",
-          "when": "view == minuet.steps"
+          "when": "view == minuet.tours"
         }
       ],
       "view/item/context": [
         {
           "command": "minuet.moveUp",
           "group": "inline@1",
-          "when": "view == minuet.steps && viewItem == step"
+          "when": "view == minuet.tours && viewItem == step"
         },
         {
           "command": "minuet.moveDown",
           "group": "inline@2",
-          "when": "view == minuet.steps && viewItem == step"
+          "when": "view == minuet.tours && viewItem == step"
         },
         {
           "command": "minuet.editStep",
           "group": "inline@3",
-          "when": "view == minuet.steps && viewItem == step"
+          "when": "view == minuet.tours && viewItem == step"
         },
         {
           "command": "minuet.deleteStep",
           "group": "inline@4",
-          "when": "view == minuet.steps && viewItem == step"
+          "when": "view == minuet.tours && viewItem == step"
         },
         {
           "command": "minuet.addWatch",
           "group": "1_edit@1",
-          "when": "view == minuet.steps && viewItem == step"
+          "when": "view == minuet.tours && viewItem == step"
         },
         {
           "command": "minuet.editStep",
           "group": "1_edit@2",
-          "when": "view == minuet.steps && viewItem == step"
+          "when": "view == minuet.tours && viewItem == step"
         },
         {
           "command": "minuet.moveUp",
           "group": "2_order@1",
-          "when": "view == minuet.steps && viewItem == step"
+          "when": "view == minuet.tours && viewItem == step"
         },
         {
           "command": "minuet.moveDown",
           "group": "2_order@2",
-          "when": "view == minuet.steps && viewItem == step"
+          "when": "view == minuet.tours && viewItem == step"
         },
         {
           "command": "minuet.deleteStep",
           "group": "3_delete@1",
-          "when": "view == minuet.steps && viewItem == step"
+          "when": "view == minuet.tours && viewItem == step"
         },
         {
           "command": "minuet.closeTour",
@@ -374,12 +374,6 @@
           "name": "Tours",
           "icon": "media/tour.svg",
           "contextualTitle": "minuet"
-        },
-        {
-          "id": "minuet.steps",
-          "name": "Steps",
-          "icon": "media/tour.svg",
-          "contextualTitle": "minuet"
         }
       ],
       "debug": [
@@ -402,10 +396,6 @@
         "view": "minuet.tours",
         "contents": "No tours yet. A tour is a .tour.json file in the .minuet folder of the project: ask your agent for one, copy one there, or create it here.\n[New Tour](command:minuet.newTour)",
         "when": "workspaceFolderCount > 0"
-      },
-      {
-        "view": "minuet.steps",
-        "contents": "No tour is open. Pick one in Tours, or right-click a line number → **Add Step on This Line** to start one."
       }
     ],
     "colors": [
@@ -456,7 +446,7 @@
         "minuet.followCursor": {
           "type": "boolean",
           "default": true,
-          "description": "When the cursor is placed on the line of a step, select that step in Steps and Current Step."
+          "description": "When the cursor is placed on the line of a step, select that step in Tours and Current Step."
         },
         "minuet.toursFolder": {
           "type": "string",

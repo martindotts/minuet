@@ -184,13 +184,6 @@ function renderHeader(s: StepViewState): HTMLElement {
     nav = el('div', { className: 'nav' }, position);
   }
 
-  const location = el('a', { className: 'location', text: step.location, title: 'Open in the editor' });
-  location.href = '#';
-  location.addEventListener('click', (e) => {
-    e.preventDefault();
-    post({ type: 'open' });
-  });
-
   const titleRow = el(
     'div',
     { className: 'title-row' },
@@ -198,7 +191,7 @@ function renderHeader(s: StepViewState): HTMLElement {
     !editing && button('⤢', 'Open the content in a tab', () => post({ type: 'openPage', id: step.id })),
     !editing && button('✎', step.contentText === undefined ? 'Edit the title' : 'Edit title and content', startEditing),
   );
-  return el('header', {}, nav, titleRow, location, s.stopped && el('div', { className: 'badge', text: '● Stopped at this step' }));
+  return el('header', {}, nav, titleRow);
 }
 
 function startEditing(): void {
@@ -409,7 +402,7 @@ function renderHighlights(s: StepViewState): HTMLElement {
   section.append(
     button(
       '+ Highlight the editor selection',
-      `Adds the lines selected in ${step.location.replace(/:\d+$/, '')}`,
+      "Adds the lines selected in the step's file",
       () => post({ type: 'addHighlight', id: step.id }),
       'link',
     ),
@@ -497,7 +490,7 @@ function renderView(): void {
         className: 'empty',
         text: s.empty
           ? 'There are no steps in this workspace. Open a tour in Tours, or add a step on a line.'
-          : 'Select a step in Steps, or click ◆ above the line of a step.',
+          : 'Select a step in Tours, or click ◆ above the line of a step.',
       }),
     );
     return;

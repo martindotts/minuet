@@ -86,7 +86,7 @@ opens it in VS Code. To run the flow it first looks for an existing test that go
 it creates a temporary one and tells you. You accept opening the tour and run the test in the debugger.
 
 1. **Install the skill** (once): Command Palette → **minuet: Install Agent Skill**, or from the `…` menu of the
-   Steps view. Pick the agents you use; the ones found on your machine come selected. It copies `SKILL.md` to
+   Tours panel. Pick the agents you use; the ones found on your machine come selected. It copies `SKILL.md` to
    each agent's user-level skills folder, so it works in any repository. It contains the format, the rules of
    the guide for agents and the whole procedure. Agents pick it up in new sessions.
 
@@ -163,19 +163,16 @@ Placing the cursor on the line of a step also selects it (turn it off with `minu
 
 ### The minuet panel
 
-The panel has its own icon in the Activity Bar, with two views:
+The panel has its own icon in the Activity Bar, with the **Tours** of the tours folder. The list follows the
+folder: a tour copied there, committed by a teammate or written by an agent shows up by itself.
 
-- **Tours**: the tours of the tours folder. The open one is marked. Click a tour to open it (the
-  current one is closed first). ✕ closes it; the context menu opens its file or deletes it. The list follows
-  the folder: a tour copied there, committed by a teammate or written by an agent shows up by itself.
-- **Steps**: the open tour.
-  - the tour **context**, if there is one (first node; click it to read it),
-  - the steps **in order**: `1. title  file:line`,
-  - a ⚠ icon on **outdated** steps,
-  - during a session, the step where execution is **stopped**.
-
-  Clicking a step opens the file at that line and shows it in Current Step. Step actions: move up, move down,
-  edit and delete. View actions: close the tour, open its file, order by execution and install the agent skill.
+- **Click a tour** to open it: the current one is closed first, and the new one expands into its steps and
+  shows its context in the Step Page tab. Clicking the open tour shows its context again.
+- **The open tour's steps**, in order: `1. title  file:line`, with ⚠ on **outdated** steps and, during a
+  session, a marker on the step where execution is **stopped**. Clicking a step opens the file at that line
+  and shows it in Current Step. Step actions: move up, move down, edit and delete.
+- **Tour actions**: ✕ closes the open tour; the context menu opens its file or deletes it. The `…` menu of the
+  panel closes the tour, opens its file, orders the steps by execution and installs the agent skill.
 
 ### The "Current Step" view
 
@@ -183,7 +180,7 @@ It lives in **Run and Debug**, next to Variables, Watch and Call Stack, so it st
 Run and Debug at every stop. It shows the step where execution is stopped or, when there is no stop, the
 selected step. It contains:
 
-- **Header:** "Step 3 of 6", the title and `file:line`, which opens the code when clicked.
+- **Header:** "Step 3 of 6" and the title.
   - Without a debug session, the ◀ ▶ buttons browse the tour so you can read it. They do not run code.
   - During a session only "Step X of Y" is shown. Use the native debugger controls to move forward.
 - **Outdated warning**, with a **Re-anchor** button.
@@ -356,7 +353,7 @@ Root:
 | --- | --- | --- | --- |
 | `version` | `1` | yes | Format version. |
 | `title` | string | no | Tour title. Shown in the panel. |
-| `context` | markdown or `{ "file" }` | no | Starting point. It is the first node of the panel. See [Step content](#step-content). |
+| `context` | markdown or `{ "file" }` | no | Starting point, shown when the tour is opened. See [Step content](#step-content). |
 | `steps` | list | yes | At least one step. |
 
 Each step:
@@ -493,8 +490,7 @@ tested on its own; the other layers adapt it to VS Code.
 | `debug/breakpointSync.ts` | Keeps steps attached to their breakpoints. |
 | `debug/stopController.ts` | Detects stops, finds the step, evaluates expressions and records the execution order. |
 | **`src/views/`** | **What the user sees.** |
-| `views/toursView.ts` | "Tours" view. |
-| `views/stepsView.ts` | "Steps" view. |
+| `views/toursView.ts` | "Tours" view: the tours, and the open one's steps. |
 | `views/currentStep/` | "Current Step" view: provider, state, message protocol and webview script. |
 | `views/stepPage.ts` | "Step Page" tab: a step's content in an editor tab. |
 | `views/decorations.ts`, `views/codeLens.ts` | Highlights, notes and the CodeLens of each step. |

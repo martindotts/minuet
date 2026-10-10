@@ -39,8 +39,6 @@ export interface StepInfo {
   contentPage: boolean;
   /** The content file could not be read. */
   contentError?: string;
-  /** "src/orders.js:14" */
-  location: string;
   stale: boolean;
   anchorText: string;
   highlights: HighlightView[];
@@ -76,7 +74,6 @@ export type ToWebview =
 
 export type FromWebview =
   | { type: 'ready' }
-  | { type: 'open' }
   | { type: 'prev' }
   | { type: 'next' }
   | { type: 'reanchor'; id: string }

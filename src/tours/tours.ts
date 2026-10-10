@@ -5,7 +5,6 @@ import { Step, EMPTY_META } from '../core/model';
 import { FolderRef, isDirectlyIn, normalizeFsPath, relativizePath, resolveToursFolder, resolveTourPath, tourFileName } from '../core/paths';
 import { buildTourFile, parseTourJson, serializeTour, stepFromFile, TourFile } from '../core/tourFormat';
 import { findBreakpointAt, findBreakpointById, newBreakpoint } from '../debug/breakpointSync';
-import { STEPS_VIEW_ID } from '../views/stepsView';
 import { readLine, StaleTracker } from './staleTracker';
 import { StepStore } from './stepStore';
 
@@ -219,7 +218,6 @@ export class Tours implements vscode.Disposable {
    */
   async open(source: vscode.Uri, options: { external?: boolean } = {}): Promise<boolean> {
     if (this.isOpen(source)) {
-      void vscode.commands.executeCommand(`${STEPS_VIEW_ID}.focus`);
       return true;
     }
     const folder = this.folder;
@@ -283,7 +281,6 @@ export class Tours implements vscode.Disposable {
     await this.load(target, text, loaded, { setBreakpoints: true });
     await this.staleTracker.refresh();
     const stale = this.store.all().filter((a) => this.staleTracker.isStale(a.id)).length;
-    void vscode.commands.executeCommand(`${STEPS_VIEW_ID}.focus`);
     if (stale > 0) {
       void vscode.window.showWarningMessage(
         `${stale} of ${this.store.count()} steps are outdated: their line no longer matches anchorText.`,

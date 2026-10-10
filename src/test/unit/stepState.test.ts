@@ -28,7 +28,6 @@ function input(overrides: Partial<StepStateInput> = {}): StepStateInput {
     stop: undefined,
     inSession: false,
     isStale: () => false,
-    location: (a) => `a.js:${a.location.line + 1}`,
     content: { html: '<p>html</p>', page: false },
     ...overrides,
   };
@@ -50,7 +49,6 @@ suite('step view state', () => {
     assert.strictEqual(state.step?.id, 'b');
     assert.strictEqual(state.step?.order, 2);
     assert.strictEqual(state.step?.total, 3);
-    assert.strictEqual(state.step?.location, 'a.js:21');
     assert.strictEqual(state.hasPrev, true);
     assert.strictEqual(state.hasNext, true);
     assert.strictEqual(state.navEnabled, true);
