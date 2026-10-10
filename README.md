@@ -472,12 +472,12 @@ press **F5** and pick **Python**; the Python extension must be installed in VS C
 ## Development
 
 ```bash
-npm install
-npm run compile    # types + lint + bundle (dist/extension.js, dist/webview.js)
-npm run lint
-npm test           # unit and integration tests (includes a real debug session of the Node.js sample)
-npm run test:python  # a real debugpy session of examples/sample-python (needs python3; installs the debugger)
-npm run package    # builds the .vsix
+pnpm install
+pnpm compile         # types + lint + bundle (dist/extension.js, dist/webview.js)
+pnpm lint
+pnpm test            # unit and integration tests (includes a real debug session of the Node.js sample)
+pnpm test:python     # a real debugpy session of examples/sample-python (needs python3; installs the debugger)
+pnpm package         # builds the .vsix
 ```
 
 <details>

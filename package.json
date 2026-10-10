@@ -500,18 +500,16 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run package-bundle",
-    "compile": "npm run check-types && npm run lint && node esbuild.js",
+    "vscode:prepublish": "pnpm run package-bundle",
+    "compile": "pnpm run check-types && pnpm run lint && node esbuild.js",
     "watch": "node esbuild.js --watch",
-    "package-bundle": "npm run check-types && npm run lint && node esbuild.js --production",
-    "package": "vsce package --no-dependencies --allow-missing-repository",
+    "package-bundle": "pnpm run check-types && pnpm run lint && node esbuild.js --production",
+    "package": "vsce package --no-dependencies",
     "check-types": "tsc --noEmit",
     "lint": "eslint src",
     "compile-tests": "node -e \"require('fs').rmSync('out',{recursive:true,force:true})\" && tsc -p . --outDir out",
-    "pretest": "npm run compile-tests && npm run compile",
-    "test": "vscode-test --label js",
-    "pretest:python": "npm run compile-tests && npm run compile",
-    "test:python": "vscode-test --label python"
+    "test": "pnpm run compile-tests && pnpm run compile && vscode-test --label js",
+    "test:python": "pnpm run compile-tests && pnpm run compile && vscode-test --label python"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
@@ -524,5 +522,6 @@
     "eslint": "^10.12.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.71.1"
-  }
+  },
+  "packageManager": "pnpm@11.5.1"
 }

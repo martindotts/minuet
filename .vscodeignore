@@ -13,3 +13,5 @@ tsconfig.json
 *.vsix
 .gitignore
 .github/**
+pnpm-lock.yaml
+pnpm-workspace.yaml
