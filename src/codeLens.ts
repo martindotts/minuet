@@ -17,7 +17,7 @@ export class StepCodeLensProvider implements vscode.CodeLensProvider, vscode.Dis
       store.onDidChange(() => this.changeEmitter.fire()),
       staleTracker.onDidChange(() => this.changeEmitter.fire()),
       vscode.workspace.onDidChangeConfiguration((e) => {
-        if (e.affectsConfiguration('stepwise.showCodeLens')) {
+        if (e.affectsConfiguration('minuet.showCodeLens')) {
           this.changeEmitter.fire();
         }
       }),
@@ -25,7 +25,7 @@ export class StepCodeLensProvider implements vscode.CodeLensProvider, vscode.Dis
   }
 
   provideCodeLenses(document: vscode.TextDocument): vscode.CodeLens[] {
-    if (!vscode.workspace.getConfiguration('stepwise').get<boolean>('showCodeLens', true)) {
+    if (!vscode.workspace.getConfiguration('minuet').get<boolean>('showCodeLens', true)) {
       return [];
     }
     const total = this.store.count();
@@ -36,8 +36,8 @@ export class StepCodeLensProvider implements vscode.CodeLensProvider, vscode.Dis
         const stale = this.staleTracker.isStale(a.id) ? '⚠ ' : '';
         return new vscode.CodeLens(new vscode.Range(a.location.line, 0, a.location.line, 0), {
           title: `${stale}◆ Step ${a.order} of ${total} · ${a.title}`,
-          tooltip: stale ? 'Outdated step: the line changed since it was annotated' : 'Show the step in Stepwise',
-          command: 'stepwise.focusStep',
+          tooltip: stale ? 'Outdated step: the line changed since it was annotated' : 'Show the step in minuet',
+          command: 'minuet.focusStep',
           arguments: [a.id],
         });
       });

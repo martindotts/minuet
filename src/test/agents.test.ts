@@ -36,7 +36,7 @@ suite('agents: Claude Code skill', () => {
   test('has the frontmatter Claude Code needs', () => {
     const match = /^---\n([\s\S]*?)\n---\n/.exec(text);
     assert.ok(match, 'frontmatter block');
-    assert.match(match[1], /^name: stepwise$/m);
+    assert.match(match[1], /^name: minuet$/m);
     assert.match(match[1], /^description: .{40,}$/m);
   });
 
@@ -48,13 +48,13 @@ suite('agents: Claude Code skill', () => {
   });
 
   test('documents the import URI the extension handles', () => {
-    const uri = /vscode:\/\/martindotts\.stepwise\/import\?file=([^"\s]+)/.exec(text);
+    const uri = /vscode:\/\/martindotts\.minuet\/import\?file=([^"\s]+)/.exec(text);
     assert.ok(uri, 'import URI in the skill');
     const request = parseUriRequest('/import', `file=${decodeURIComponent(uri[1])}`);
     assert.deepStrictEqual(request, { action: 'import', file: '/tmp/x.tour.json' });
   });
 
-  test('is installed under ~/.claude/skills/stepwise', () => {
-    assert.strictEqual(claudeSkillDir('/home/u'), path.join('/home/u', '.claude', 'skills', 'stepwise'));
+  test('is installed under ~/.claude/skills/minuet', () => {
+    assert.strictEqual(claudeSkillDir('/home/u'), path.join('/home/u', '.claude', 'skills', 'minuet'));
   });
 });

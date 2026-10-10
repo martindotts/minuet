@@ -1,9 +1,9 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { StepwiseApi } from '../extension';
+import { MinuetApi } from '../extension';
 import { Annotation, EMPTY_META } from '../model';
 
-const EXTENSION_ID = 'martindotts.stepwise';
+const EXTENSION_ID = 'martindotts.minuet';
 const POLL_MS = 50;
 
 async function waitFor<T>(
@@ -43,9 +43,9 @@ function breakpointLines(): number[] {
     .sort((a, b) => a - b);
 }
 
-suite('Stepwise (integration)', function () {
+suite('minuet (integration)', function () {
   this.timeout(90000);
-  let api: StepwiseApi;
+  let api: MinuetApi;
   const step = (order: number): Annotation => {
     const a = api.store.all().find((x) => x.order === order);
     assert.ok(a, `step ${order} exists`);
@@ -53,7 +53,7 @@ suite('Stepwise (integration)', function () {
   };
 
   suiteSetup(async () => {
-    const extension = vscode.extensions.getExtension<StepwiseApi>(EXTENSION_ID);
+    const extension = vscode.extensions.getExtension<MinuetApi>(EXTENSION_ID);
     assert.ok(extension, 'extension is installed');
     api = await extension.activate();
     // State from a previous run lives in .vscode-test/user-data; start clean.
@@ -72,7 +72,7 @@ suite('Stepwise (integration)', function () {
 
   test('importing tour.json creates the steps, the breakpoints and the context', async () => {
     const tourUri = vscode.Uri.joinPath(folder().uri, 'tour.json');
-    await vscode.commands.executeCommand('stepwise.importTour', tourUri);
+    await vscode.commands.executeCommand('minuet.importTour', tourUri);
 
     const steps = api.store.all();
     assert.deepStrictEqual(
@@ -99,7 +99,7 @@ suite('Stepwise (integration)', function () {
       ordersUri(),
     );
     const ours = lenses
-      .filter((l) => l.command?.command === 'stepwise.focusStep')
+      .filter((l) => l.command?.command === 'minuet.focusStep')
       .sort((a, b) => a.range.start.line - b.range.start.line);
     assert.deepStrictEqual(
       ours.map((l) => l.range.start.line),
@@ -107,7 +107,7 @@ suite('Stepwise (integration)', function () {
     );
     assert.strictEqual(ours[2].command?.title, '◆ Step 1 of 5 · Entry: the order arrives');
 
-    await vscode.commands.executeCommand('stepwise.focusStep', step(3).id);
+    await vscode.commands.executeCommand('minuet.focusStep', step(3).id);
     assert.strictEqual(api.selection.selectedId, step(3).id);
     const state = await waitFor(
       () => (api.stepView.state?.step?.id === step(3).id ? api.stepView.state : undefined),
@@ -134,7 +134,7 @@ suite('Stepwise (integration)', function () {
 
   test('debugging the sample test stops on every step with real watch values', async () => {
     const started = await vscode.debug.startDebugging(folder(), {
-      name: 'stepwise integration',
+      name: 'minuet integration',
       type: 'node',
       request: 'launch',
       runtimeArgs: ['--test'],
@@ -167,7 +167,7 @@ suite('Stepwise (integration)', function () {
       assert.strictEqual(view.navEnabled, false, 'browsing is disabled while stopped');
       assert.strictEqual(view.generation, stop.generation);
       // Starting a session switches the sidebar to Run and Debug; a hidden webview draws nothing until shown.
-      await vscode.commands.executeCommand('stepwise.step.focus');
+      await vscode.commands.executeCommand('minuet.step.focus');
       await waitFor(
         () => api.stepView.rendered?.stepId === id && api.stepView.rendered.generation === stop.generation,
         `Current Step draws step ${order} while stopped`,
@@ -213,7 +213,7 @@ suite('Stepwise (integration)', function () {
     const subtotal = step(2);
     await api.store.move(subtotal.id, -1);
     await vscode.debug.startDebugging(folder(), {
-      name: 'stepwise integration (order)',
+      name: 'minuet integration (order)',
       type: 'node',
       request: 'launch',
       runtimeArgs: ['--test'],
@@ -239,7 +239,7 @@ suite('Stepwise (integration)', function () {
     const first = step(1);
     await api.store.update(first.id, { watches: ['doesNotExist.value', 'order.id'] });
     await vscode.debug.startDebugging(folder(), {
-      name: 'stepwise integration (errors)',
+      name: 'minuet integration (errors)',
       type: 'node',
       request: 'launch',
       runtimeArgs: ['--test'],

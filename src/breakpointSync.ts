@@ -74,7 +74,7 @@ export class BreakpointSync implements vscode.Disposable {
 
   private enqueue(task: () => Promise<void>): void {
     this.queue = this.queue.then(task).catch((err) => {
-      console.error('[stepwise] breakpoint sync failed', err);
+      console.error('[minuet] breakpoint sync failed', err);
     });
   }
 

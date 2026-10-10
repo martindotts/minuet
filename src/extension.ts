@@ -9,10 +9,10 @@ import { StepView } from './stepView';
 import { StopController } from './stopController';
 import { AnnotationStore } from './store';
 import { TourView } from './tourView';
-import { StepwiseUriHandler } from './uriHandler';
+import { MinuetUriHandler } from './uriHandler';
 
 /** Returned from activate(); used by the integration tests. */
-export interface StepwiseApi {
+export interface MinuetApi {
   store: AnnotationStore;
   staleTracker: StaleTracker;
   stops: StopController;
@@ -21,7 +21,7 @@ export interface StepwiseApi {
   decorations: StepDecorations;
 }
 
-export function activate(context: vscode.ExtensionContext): StepwiseApi {
+export function activate(context: vscode.ExtensionContext): MinuetApi {
   const store = new AnnotationStore(context.workspaceState);
   const breakpointSync = new BreakpointSync(store);
   const staleTracker = new StaleTracker(store);
@@ -45,7 +45,7 @@ export function activate(context: vscode.ExtensionContext): StepwiseApi {
     codeLens,
     contextProvider,
     vscode.workspace.registerTextDocumentContentProvider(CONTEXT_SCHEME, contextProvider),
-    vscode.window.registerUriHandler(new StepwiseUriHandler(store, staleTracker)),
+    vscode.window.registerUriHandler(new MinuetUriHandler(store, staleTracker)),
     ...registerCommands({ extensionUri: context.extensionUri, store, staleTracker, stops, selection, stepView }),
   );
 

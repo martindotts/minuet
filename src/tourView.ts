@@ -7,7 +7,7 @@ import { StaleTracker } from './staleTracker';
 import { StopController } from './stopController';
 import { AnnotationStore } from './store';
 
-export const VIEW_ID = 'stepwise.tour';
+export const VIEW_ID = 'minuet.tour';
 
 export type TourNode =
   | { kind: 'context' }
@@ -156,7 +156,7 @@ export class TourView implements vscode.TreeDataProvider<TourNode>, vscode.Dispo
     item.contextValue = 'context';
     if (meta.context.trim()) {
       item.tooltip = new vscode.MarkdownString(meta.context);
-      item.command = { command: 'stepwise.showContext', title: 'Show context' };
+      item.command = { command: 'minuet.showContext', title: 'Show context' };
     }
     return item;
   }
@@ -189,7 +189,7 @@ export class TourView implements vscode.TreeDataProvider<TourNode>, vscode.Dispo
       tooltip.appendMarkdown('\n\n$(warning) **Outdated:** the line no longer matches the annotated text.');
     }
     item.tooltip = tooltip;
-    item.command = { command: 'stepwise.openStep', title: 'Open', arguments: [annotation.id] };
+    item.command = { command: 'minuet.openStep', title: 'Open', arguments: [annotation.id] };
     return item;
   }
 

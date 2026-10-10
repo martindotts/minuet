@@ -1,11 +1,11 @@
 ---
-name: stepwise
-description: Explain how a JavaScript/TypeScript code flow works with a step-by-step tour in the VS Code debugger (Stepwise extension), running the real code through an existing test or, if there is none, a temporary one. Use when the user asks to explain, understand or walk through a flow "with the debugger", "with Stepwise", "step by step with real values", or asks for a tour/walkthrough of the code.
+name: minuet
+description: Explain how a JavaScript/TypeScript code flow works with a step-by-step tour in the VS Code debugger (minuet extension), running the real code through an existing test or, if there is none, a temporary one. Use when the user asks to explain, understand or walk through a flow "with the debugger", "with minuet", "step by step with real values", or asks for a tour/walkthrough of the code.
 ---
 
-# Tours with Stepwise
+# Tours with minuet
 
-Stepwise is a VS Code extension that adds annotations to the breakpoints of the JavaScript/TypeScript
+minuet is a VS Code extension that adds annotations to the breakpoints of the JavaScript/TypeScript
 debugger. Each step of a tour is a breakpoint with a title, a markdown comment, highlighted ranges and
 expressions that are evaluated with the real values when execution stops there.
 
@@ -115,11 +115,11 @@ Open the extension's URI with the **absolute**, URL-encoded path of the JSON:
 
 ```bash
 # macOS
-open "vscode://martindotts.stepwise/import?file=%2Ftmp%2Fx.tour.json"
+open "vscode://martindotts.minuet/import?file=%2Ftmp%2Fx.tour.json"
 # Linux
-xdg-open "vscode://martindotts.stepwise/import?file=%2Ftmp%2Fx.tour.json"
+xdg-open "vscode://martindotts.minuet/import?file=%2Ftmp%2Fx.tour.json"
 # Windows (PowerShell)
-Start-Process "vscode://martindotts.stepwise/import?file=C%3A%5CUsers%5C...%5Cx.tour.json"
+Start-Process "vscode://martindotts.minuet/import?file=C%3A%5CUsers%5C...%5Cx.tour.json"
 ```
 
 VS Code asks the user to confirm (Import, or Replace / Append if there is already a tour). If several VS Code
@@ -153,7 +153,7 @@ When the user is done (or asks for it):
 
 - delete **only what you created**: the tour JSON and, if there was one, the temporary test. Existing tests are
   not touched,
-- remind them that in VS Code they can run **Stepwise: Delete All Annotations** (it also offers to
+- remind them that in VS Code they can run **minuet: Delete All Annotations** (it also offers to
   delete the breakpoints).
 
 Annotations live in VS Code's state, not in the repository: there is nothing else to clean up.

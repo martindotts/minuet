@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { Annotation, EMPTY_META, TourMeta, renumber, sortByOrder } from './model';
 
-const ANNOTATIONS_KEY = 'stepwise.annotations';
-const META_KEY = 'stepwise.tourMeta';
+const ANNOTATIONS_KEY = 'minuet.annotations';
+const META_KEY = 'minuet.tourMeta';
 
 /** Annotations persisted in the extension's workspaceState (never in the user's repository). */
 export class AnnotationStore implements vscode.Disposable {

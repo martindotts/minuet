@@ -11,17 +11,17 @@ import { AnnotationStore } from './store';
 export class StepDecorations implements vscode.Disposable {
   private readonly highlightType = vscode.window.createTextEditorDecorationType({
     isWholeLine: true,
-    backgroundColor: new vscode.ThemeColor('stepwise.highlightBackground'),
-    borderColor: new vscode.ThemeColor('stepwise.highlightBorder'),
+    backgroundColor: new vscode.ThemeColor('minuet.highlightBackground'),
+    borderColor: new vscode.ThemeColor('minuet.highlightBorder'),
     borderStyle: 'solid',
     borderWidth: '0 0 0 3px',
-    overviewRulerColor: new vscode.ThemeColor('stepwise.highlightBorder'),
+    overviewRulerColor: new vscode.ThemeColor('minuet.highlightBorder'),
     overviewRulerLane: vscode.OverviewRulerLane.Left,
   });
 
   private readonly noteType = vscode.window.createTextEditorDecorationType({
     after: {
-      color: new vscode.ThemeColor('stepwise.noteForeground'),
+      color: new vscode.ThemeColor('minuet.noteForeground'),
       fontStyle: 'italic',
       margin: '0 0 0 2em',
     },

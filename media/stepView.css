@@ -243,7 +243,7 @@ button.link:hover {
   flex: none;
   min-width: 5em;
   padding-left: 6px;
-  border-left: 3px solid var(--vscode-stepwise-highlightBorder, var(--vscode-charts-purple));
+  border-left: 3px solid var(--vscode-minuet-highlightBorder, var(--vscode-charts-purple));
   font-family: var(--vscode-editor-font-family);
   font-size: var(--vscode-editor-font-size);
 }

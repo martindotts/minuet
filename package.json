@@ -1,6 +1,6 @@
 {
-  "name": "stepwise",
-  "displayName": "Stepwise",
+  "name": "minuet",
+  "displayName": "minuet",
   "description": "Step-by-step debugging, explained: your AI agent turns breakpoints into a guided tour of any JavaScript/TypeScript flow, with the real values of the run.",
   "version": "0.1.0",
   "publisher": "martindotts",
@@ -11,11 +11,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/martindotts/stepwise.git"
+    "url": "https://github.com/martindotts/minuet.git"
   },
-  "homepage": "https://github.com/martindotts/stepwise#readme",
+  "homepage": "https://github.com/martindotts/minuet#readme",
   "bugs": {
-    "url": "https://github.com/martindotts/stepwise/issues"
+    "url": "https://github.com/martindotts/minuet/issues"
   },
   "galleryBanner": {
     "color": "#46196f",
@@ -50,297 +50,297 @@
   "contributes": {
     "commands": [
       {
-        "command": "stepwise.annotateLine",
+        "command": "minuet.annotateLine",
         "title": "Annotate Breakpoint on This Line",
-        "category": "Stepwise",
+        "category": "minuet",
         "icon": "$(comment-discussion)"
       },
       {
-        "command": "stepwise.addHighlight",
+        "command": "minuet.addHighlight",
         "title": "Highlight Selection in Annotation...",
-        "category": "Stepwise",
+        "category": "minuet",
         "icon": "$(symbol-color)"
       },
       {
-        "command": "stepwise.addWatch",
+        "command": "minuet.addWatch",
         "title": "Add Expression to Evaluate...",
-        "category": "Stepwise",
+        "category": "minuet",
         "icon": "$(eye)"
       },
       {
-        "command": "stepwise.editAnnotation",
+        "command": "minuet.editAnnotation",
         "title": "Edit Annotation",
-        "category": "Stepwise",
+        "category": "minuet",
         "icon": "$(edit)"
       },
       {
-        "command": "stepwise.deleteAnnotation",
+        "command": "minuet.deleteAnnotation",
         "title": "Delete Annotation",
-        "category": "Stepwise",
+        "category": "minuet",
         "icon": "$(trash)"
       },
       {
-        "command": "stepwise.moveUp",
+        "command": "minuet.moveUp",
         "title": "Move Step Up",
-        "category": "Stepwise",
+        "category": "minuet",
         "icon": "$(arrow-up)"
       },
       {
-        "command": "stepwise.moveDown",
+        "command": "minuet.moveDown",
         "title": "Move Step Down",
-        "category": "Stepwise",
+        "category": "minuet",
         "icon": "$(arrow-down)"
       },
       {
-        "command": "stepwise.importTour",
+        "command": "minuet.importTour",
         "title": "Import Tour...",
-        "category": "Stepwise",
+        "category": "minuet",
         "icon": "$(cloud-download)"
       },
       {
-        "command": "stepwise.exportTour",
+        "command": "minuet.exportTour",
         "title": "Export Tour...",
-        "category": "Stepwise",
+        "category": "minuet",
         "icon": "$(cloud-upload)"
       },
       {
-        "command": "stepwise.clearAll",
+        "command": "minuet.clearAll",
         "title": "Delete All Annotations",
-        "category": "Stepwise",
+        "category": "minuet",
         "icon": "$(clear-all)"
       },
       {
-        "command": "stepwise.installClaudeSkill",
+        "command": "minuet.installClaudeSkill",
         "title": "Install Claude Code Skill",
-        "category": "Stepwise",
+        "category": "minuet",
         "icon": "$(sparkle)"
       },
       {
-        "command": "stepwise.orderByExecution",
+        "command": "minuet.orderByExecution",
         "title": "Order Steps by Last Run",
-        "category": "Stepwise",
+        "category": "minuet",
         "icon": "$(list-ordered)"
       },
       {
-        "command": "stepwise.openStep",
+        "command": "minuet.openStep",
         "title": "Open Step",
-        "category": "Stepwise"
+        "category": "minuet"
       },
       {
-        "command": "stepwise.focusStep",
+        "command": "minuet.focusStep",
         "title": "Show Step",
-        "category": "Stepwise"
+        "category": "minuet"
       },
       {
-        "command": "stepwise.showContext",
+        "command": "minuet.showContext",
         "title": "Show Tour Context",
-        "category": "Stepwise"
+        "category": "minuet"
       }
     ],
     "submenus": [
       {
-        "id": "stepwise.editorMenu",
-        "label": "Stepwise"
+        "id": "minuet.editorMenu",
+        "label": "minuet"
       }
     ],
     "menus": {
       "commandPalette": [
         {
-          "command": "stepwise.moveUp",
+          "command": "minuet.moveUp",
           "when": "false"
         },
         {
-          "command": "stepwise.moveDown",
+          "command": "minuet.moveDown",
           "when": "false"
         },
         {
-          "command": "stepwise.openStep",
+          "command": "minuet.openStep",
           "when": "false"
         },
         {
-          "command": "stepwise.showContext",
+          "command": "minuet.showContext",
           "when": "false"
         },
         {
-          "command": "stepwise.addHighlight",
+          "command": "minuet.addHighlight",
           "when": "editorIsOpen"
         },
         {
-          "command": "stepwise.focusStep",
+          "command": "minuet.focusStep",
           "when": "false"
         }
       ],
       "editor/context": [
         {
-          "submenu": "stepwise.editorMenu",
-          "group": "stepwise@1",
+          "submenu": "minuet.editorMenu",
+          "group": "minuet@1",
           "when": "resourceScheme == file"
         }
       ],
-      "stepwise.editorMenu": [
+      "minuet.editorMenu": [
         {
-          "command": "stepwise.annotateLine",
+          "command": "minuet.annotateLine",
           "group": "1_create@1"
         },
         {
-          "command": "stepwise.addHighlight",
+          "command": "minuet.addHighlight",
           "group": "1_create@2",
           "when": "editorHasSelection"
         },
         {
-          "command": "stepwise.addWatch",
+          "command": "minuet.addWatch",
           "group": "1_create@3"
         },
         {
-          "command": "stepwise.editAnnotation",
+          "command": "minuet.editAnnotation",
           "group": "2_edit@1"
         },
         {
-          "command": "stepwise.deleteAnnotation",
+          "command": "minuet.deleteAnnotation",
           "group": "2_edit@2"
         }
       ],
       "editor/lineNumber/context": [
         {
-          "command": "stepwise.annotateLine",
-          "group": "stepwise@1",
+          "command": "minuet.annotateLine",
+          "group": "minuet@1",
           "when": "resourceScheme == file"
         },
         {
-          "command": "stepwise.addWatch",
-          "group": "stepwise@2",
+          "command": "minuet.addWatch",
+          "group": "minuet@2",
           "when": "resourceScheme == file"
         },
         {
-          "command": "stepwise.editAnnotation",
-          "group": "stepwise@3",
+          "command": "minuet.editAnnotation",
+          "group": "minuet@3",
           "when": "resourceScheme == file"
         },
         {
-          "command": "stepwise.deleteAnnotation",
-          "group": "stepwise@4",
+          "command": "minuet.deleteAnnotation",
+          "group": "minuet@4",
           "when": "resourceScheme == file"
         }
       ],
       "explorer/context": [
         {
-          "command": "stepwise.importTour",
-          "group": "stepwise@1",
+          "command": "minuet.importTour",
+          "group": "minuet@1",
           "when": "resourceExtname == .json"
         }
       ],
       "view/title": [
         {
-          "command": "stepwise.importTour",
+          "command": "minuet.importTour",
           "group": "navigation@1",
-          "when": "view == stepwise.tour"
+          "when": "view == minuet.tour"
         },
         {
-          "command": "stepwise.exportTour",
+          "command": "minuet.exportTour",
           "group": "navigation@2",
-          "when": "view == stepwise.tour"
+          "when": "view == minuet.tour"
         },
         {
-          "command": "stepwise.orderByExecution",
+          "command": "minuet.orderByExecution",
           "group": "1_order@1",
-          "when": "view == stepwise.tour"
+          "when": "view == minuet.tour"
         },
         {
-          "command": "stepwise.clearAll",
+          "command": "minuet.clearAll",
           "group": "z_danger@1",
-          "when": "view == stepwise.tour"
+          "when": "view == minuet.tour"
         },
         {
-          "command": "stepwise.installClaudeSkill",
+          "command": "minuet.installClaudeSkill",
           "group": "y_agents@1",
-          "when": "view == stepwise.tour"
+          "when": "view == minuet.tour"
         }
       ],
       "view/item/context": [
         {
-          "command": "stepwise.moveUp",
+          "command": "minuet.moveUp",
           "group": "inline@1",
-          "when": "view == stepwise.tour && viewItem == step"
+          "when": "view == minuet.tour && viewItem == step"
         },
         {
-          "command": "stepwise.moveDown",
+          "command": "minuet.moveDown",
           "group": "inline@2",
-          "when": "view == stepwise.tour && viewItem == step"
+          "when": "view == minuet.tour && viewItem == step"
         },
         {
-          "command": "stepwise.editAnnotation",
+          "command": "minuet.editAnnotation",
           "group": "inline@3",
-          "when": "view == stepwise.tour && viewItem == step"
+          "when": "view == minuet.tour && viewItem == step"
         },
         {
-          "command": "stepwise.deleteAnnotation",
+          "command": "minuet.deleteAnnotation",
           "group": "inline@4",
-          "when": "view == stepwise.tour && viewItem == step"
+          "when": "view == minuet.tour && viewItem == step"
         },
         {
-          "command": "stepwise.addWatch",
+          "command": "minuet.addWatch",
           "group": "1_edit@1",
-          "when": "view == stepwise.tour && viewItem == step"
+          "when": "view == minuet.tour && viewItem == step"
         },
         {
-          "command": "stepwise.editAnnotation",
+          "command": "minuet.editAnnotation",
           "group": "1_edit@2",
-          "when": "view == stepwise.tour && viewItem == step"
+          "when": "view == minuet.tour && viewItem == step"
         },
         {
-          "command": "stepwise.moveUp",
+          "command": "minuet.moveUp",
           "group": "2_order@1",
-          "when": "view == stepwise.tour && viewItem == step"
+          "when": "view == minuet.tour && viewItem == step"
         },
         {
-          "command": "stepwise.moveDown",
+          "command": "minuet.moveDown",
           "group": "2_order@2",
-          "when": "view == stepwise.tour && viewItem == step"
+          "when": "view == minuet.tour && viewItem == step"
         },
         {
-          "command": "stepwise.deleteAnnotation",
+          "command": "minuet.deleteAnnotation",
           "group": "3_delete@1",
-          "when": "view == stepwise.tour && viewItem == step"
+          "when": "view == minuet.tour && viewItem == step"
         }
       ]
     },
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "stepwise",
-          "title": "Stepwise",
+          "id": "minuet",
+          "title": "minuet",
           "icon": "media/tour.svg"
         }
       ]
     },
     "views": {
-      "stepwise": [
+      "minuet": [
         {
-          "id": "stepwise.tour",
+          "id": "minuet.tour",
           "name": "Tour",
           "icon": "media/tour.svg",
-          "contextualTitle": "Stepwise"
+          "contextualTitle": "minuet"
         }
       ],
       "debug": [
         {
           "type": "webview",
-          "id": "stepwise.step",
+          "id": "minuet.step",
           "name": "Current Step",
-          "contextualTitle": "Stepwise",
+          "contextualTitle": "minuet",
           "visibility": "visible"
         }
       ]
     },
     "viewsWelcome": [
       {
-        "view": "stepwise.tour",
-        "contents": "There are no annotations in this workspace.\n[Import Tour](command:stepwise.importTour)\nYou can also annotate a breakpoint from the editor: right-click the line number → **Annotate Breakpoint on This Line**."
+        "view": "minuet.tour",
+        "contents": "There are no annotations in this workspace.\n[Import Tour](command:minuet.importTour)\nYou can also annotate a breakpoint from the editor: right-click the line number → **Annotate Breakpoint on This Line**."
       }
     ],
     "colors": [
       {
-        "id": "stepwise.highlightBackground",
+        "id": "minuet.highlightBackground",
         "description": "Background of the highlighted ranges of the current step.",
         "defaults": {
           "dark": "#b180d714",
@@ -350,7 +350,7 @@
         }
       },
       {
-        "id": "stepwise.highlightBorder",
+        "id": "minuet.highlightBorder",
         "description": "Left border of the highlighted ranges of the current step.",
         "defaults": {
           "dark": "#b180d7a0",
@@ -360,7 +360,7 @@
         }
       },
       {
-        "id": "stepwise.noteForeground",
+        "id": "minuet.noteForeground",
         "description": "Color of a highlight note.",
         "defaults": {
           "dark": "editorCodeLens.foreground",
@@ -371,19 +371,19 @@
       }
     ],
     "configuration": {
-      "title": "Stepwise",
+      "title": "minuet",
       "properties": {
-        "stepwise.suggestExecutionOrder": {
+        "minuet.suggestExecutionOrder": {
           "type": "boolean",
           "default": true,
           "description": "When a debug session ends, offer to reorder the tour if execution went through the steps in a different order."
         },
-        "stepwise.showCodeLens": {
+        "minuet.showCodeLens": {
           "type": "boolean",
           "default": true,
           "description": "Show \"◆ Step N of M · title\" above each annotated line. Clicking it shows the step in Current Step."
         },
-        "stepwise.followCursor": {
+        "minuet.followCursor": {
           "type": "boolean",
           "default": true,
           "description": "When the cursor is placed on an annotated line, select that step in Tour and Current Step."

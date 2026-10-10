@@ -15,7 +15,7 @@ import { StopController } from './stopController';
 import { AnnotationStore } from './store';
 import { TourNode } from './tourView';
 
-export const CONTEXT_SCHEME = 'stepwise';
+export const CONTEXT_SCHEME = 'minuet';
 const CONTEXT_URI = vscode.Uri.from({ scheme: CONTEXT_SCHEME, path: '/Tour context.md' });
 
 interface Services {
@@ -494,7 +494,7 @@ async function orderStepsByExecution(services: Services, confirmed = false): Pro
 /** After a run, offers to reorder when execution visited the steps out of tour order. */
 async function suggestExecutionOrder(services: Services, hits: string[]): Promise<void> {
   const { store } = services;
-  const enabled = vscode.workspace.getConfiguration('stepwise').get<boolean>('suggestExecutionOrder', true);
+  const enabled = vscode.workspace.getConfiguration('minuet').get<boolean>('suggestExecutionOrder', true);
   if (!enabled || hits.length < 2 || isInExecutionOrder(store.all(), hits)) {
     return;
   }
@@ -509,14 +509,14 @@ async function suggestExecutionOrder(services: Services, hits: string[]): Promis
     await orderStepsByExecution(services, true);
   } else if (choice === never) {
     await vscode.workspace
-      .getConfiguration('stepwise')
+      .getConfiguration('minuet')
       .update('suggestExecutionOrder', false, vscode.ConfigurationTarget.Global);
   }
 }
 
 /** Where Claude Code looks for user-level skills. */
 export function claudeSkillDir(home = os.homedir()): string {
-  return path.join(home, '.claude', 'skills', 'stepwise');
+  return path.join(home, '.claude', 'skills', 'minuet');
 }
 
 /** Copies the bundled skill so Claude Code knows how to build and import tours, in any repository. */
@@ -538,7 +538,7 @@ async function installClaudeSkill(extensionUri: vscode.Uri): Promise<void> {
   if (existing) {
     const replace = 'Replace';
     const choice = await vscode.window.showWarningMessage(
-      'An "stepwise" skill with different content is already installed.',
+      'A "minuet" skill with different content is already installed.',
       { modal: true, detail: `${target.fsPath}\n\nIt will be replaced with the version bundled with the extension.` },
       replace,
     );
@@ -590,7 +590,7 @@ export function contextContentProvider(store: AnnotationStore): vscode.TextDocum
 export function registerCommands(services: Services): vscode.Disposable[] {
   const { store, staleTracker, stops, selection } = services;
   const register = (id: string, handler: (...args: unknown[]) => unknown): vscode.Disposable =>
-    vscode.commands.registerCommand(`stepwise.${id}`, handler);
+    vscode.commands.registerCommand(`minuet.${id}`, handler);
 
   return [
     register('annotateLine', (arg) => annotateLine(services, arg)),

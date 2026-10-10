@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="media/icon.png" width="112" alt="Stepwise">
+  <img src="media/icon.png" width="112" alt="minuet">
 </p>
 
-<h1 align="center">Stepwise</h1>
+<h1 align="center">minuet</h1>
 
 <p align="center">
   <strong>Step-by-step debugging, explained.</strong><br>
@@ -11,9 +11,9 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/martindotts/stepwise/releases"><img src="https://img.shields.io/github/v/release/martindotts/stepwise?include_prereleases&label=release&color=6a32a0" alt="Release"></a>
-  <a href="https://github.com/martindotts/stepwise/actions/workflows/release.yml"><img src="https://github.com/martindotts/stepwise/actions/workflows/release.yml/badge.svg" alt="Build"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/martindotts/stepwise?color=6a32a0" alt="License: MIT"></a>
+  <a href="https://github.com/martindotts/minuet/releases"><img src="https://img.shields.io/github/v/release/martindotts/minuet?include_prereleases&label=release&color=6a32a0" alt="Release"></a>
+  <a href="https://github.com/martindotts/minuet/actions/workflows/release.yml"><img src="https://github.com/martindotts/minuet/actions/workflows/release.yml/badge.svg" alt="Build"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/martindotts/minuet?color=6a32a0" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/VS%20Code-1.90%2B-6a32a0" alt="VS Code 1.90+">
 </p>
 
@@ -22,7 +22,7 @@
   <a href="#how-it-works">How it works</a> ·
   <a href="#using-it-with-agents-claude-code">Agents</a> ·
   <a href="#tour-file-format">Tour format</a> ·
-  <a href="https://github.com/martindotts/stepwise/releases">Releases</a>
+  <a href="https://github.com/martindotts/minuet/releases">Releases</a>
 </p>
 
 ---
@@ -30,24 +30,24 @@
 ## Quick start
 
 1. **Install.** Download the `.vsix` of the latest build from
-   [Releases](https://github.com/martindotts/stepwise/releases) and run:
+   [Releases](https://github.com/martindotts/minuet/releases) and run:
 
    ```bash
-   code --install-extension stepwise-*.vsix
+   code --install-extension minuet-*.vsix
    ```
 
    Or in VS Code: **Extensions → … → Install from VSIX…** Requires VS Code 1.90 or later.
 
-2. **Install the Claude Code skill** (once): Command Palette → **Stepwise: Install Claude Code Skill**.
+2. **Install the Claude Code skill** (once): Command Palette → **minuet: Install Claude Code Skill**.
 
 3. **Ask your agent:**
 
-   > Explain with Stepwise how the order confirmation email is built
+   > Explain with minuet how the order confirmation email is built
 
 4. **Run it.** Accept the import and start the test the agent picked in the debugger. Each stop shows the step,
    its explanation and the real values.
 
-## Why Stepwise
+## Why minuet
 
 - **Your agent builds the tour.** It reads the code, picks the steps, finds (or writes) a test that runs the flow
   and imports the tour into VS Code. You confirm once.
@@ -83,24 +83,24 @@ An agent can build the whole tour: it reads the code, decides what to run, write
 into VS Code. To run the flow it first looks for an existing test that goes through it; if there is none, it
 creates a temporary one and tells you. You accept the import and run the test in the debugger.
 
-1. **Install the skill** (once): Command Palette → **Stepwise: Install Claude Code Skill**, or from the
-   `…` menu of the Tour panel. It copies `SKILL.md` to `~/.claude/skills/stepwise/`, so it works in any
+1. **Install the skill** (once): Command Palette → **minuet: Install Claude Code Skill**, or from the
+   `…` menu of the Tour panel. It copies `SKILL.md` to `~/.claude/skills/minuet/`, so it works in any
    repository. It contains the format, the rules of the guide for agents and the whole procedure. Claude Code
    picks it up in new sessions.
-2. **Ask the agent**, for example: *"Explain with Stepwise how the order confirmation email is built"*.
+2. **Ask the agent**, for example: *"Explain with minuet how the order confirmation email is built"*.
 3. **The agent imports the tour** by opening a URI of the extension. VS Code always asks you to confirm before
    importing.
 
 ### Import URI
 
 ```
-vscode://martindotts.stepwise/import?file=<absolute, URL-encoded path of the JSON>
+vscode://martindotts.minuet/import?file=<absolute, URL-encoded path of the JSON>
 ```
 
 For example, from a terminal on macOS:
 
 ```bash
-open "vscode://martindotts.stepwise/import?file=%2Ftmp%2Fmy.tour.json"
+open "vscode://martindotts.minuet/import?file=%2Ftmp%2Fmy.tour.json"
 ```
 
 On Linux use `xdg-open`, on Windows `Start-Process`.
@@ -117,8 +117,8 @@ On Linux use `xdg-open`, on Windows `Start-Process`.
 
 ### Building a tour by hand
 
-All commands are in the Command Palette (**Stepwise: …**). They are also in the editor context menu
-(*Stepwise* submenu) and in the line number context menu (right-click the gutter).
+All commands are in the Command Palette (**minuet: …**). They are also in the editor context menu
+(*minuet* submenu) and in the line number context menu (right-click the gutter).
 
 | Command | What it does |
 | --- | --- |
@@ -136,7 +136,7 @@ All commands are in the Command Palette (**Stepwise: …**). They are also in th
 
 A CodeLens appears above each annotated line: `◆ Step 3 of 6 · title` (with ⚠ if it is outdated). Clicking it
 shows the step in **Current Step**, inside Run and Debug. When you go back to **Tour**, that step is selected.
-Placing the cursor on an annotated line also selects its step (turn it off with `stepwise.followCursor`).
+Placing the cursor on an annotated line also selects its step (turn it off with `minuet.followCursor`).
 
 ### The "Tour" panel
 
@@ -350,15 +350,15 @@ A complete example is in `examples/sample-node/tour.json`.
 
 | Setting | Default | Description |
 | --- | --- | --- |
-| `stepwise.showCodeLens` | `true` | Show `◆ Step N of M · title` above each annotated line. |
-| `stepwise.followCursor` | `true` | Select a step when the cursor is placed on its line. |
-| `stepwise.suggestExecutionOrder` | `true` | When a session ends, offer to reorder if execution went through the steps in a different order. |
+| `minuet.showCodeLens` | `true` | Show `◆ Step N of M · title` above each annotated line. |
+| `minuet.followCursor` | `true` | Select a step when the cursor is placed on its line. |
+| `minuet.suggestExecutionOrder` | `true` | When a session ends, offer to reorder if execution went through the steps in a different order. |
 
 Colors can be changed in `workbench.colorCustomizations`:
 
-- `stepwise.highlightBackground`
-- `stepwise.highlightBorder`
-- `stepwise.noteForeground`
+- `minuet.highlightBackground`
+- `minuet.highlightBorder`
+- `minuet.noteForeground`
 
 ---
 
@@ -410,7 +410,7 @@ npm run package    # builds the .vsix
 | `src/navigation.ts` | Opening a step in the editor. |
 | `src/importExport.ts` | Import and export. |
 | `src/commands.ts` | Commands. |
-| `src/uriHandler.ts` | `vscode://martindotts.stepwise/import` URI. |
+| `src/uriHandler.ts` | `vscode://martindotts.minuet/import` URI. |
 | `resources/claude-skill/SKILL.md` | Claude Code skill installed by the command. |
 
 </details>

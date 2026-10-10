@@ -10,7 +10,7 @@ import { StopController } from './stopController';
 import { AnnotationStore } from './store';
 import { FromWebview, StepViewState, ToWebview, VariableView } from './webview/protocol';
 
-export const STEP_VIEW_ID = 'stepwise.step';
+export const STEP_VIEW_ID = 'minuet.step';
 
 function escapeHtml(text: string): string {
   return text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -290,7 +290,7 @@ export class StepView implements vscode.WebviewViewProvider, vscode.Disposable {
         return;
       case 'error':
         this.renderErrors.push(message.message);
-        console.error('[stepwise] Current Step failed to render:', message.message);
+        console.error('[minuet] Current Step failed to render:', message.message);
         return;
     }
   }

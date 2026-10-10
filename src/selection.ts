@@ -53,7 +53,7 @@ export class StepSelection implements vscode.Disposable {
   }
 
   private followCursor(e: vscode.TextEditorSelectionChangeEvent): void {
-    if (!vscode.workspace.getConfiguration('stepwise').get<boolean>('followCursor', true)) {
+    if (!vscode.workspace.getConfiguration('minuet').get<boolean>('followCursor', true)) {
       return;
     }
     if (e.textEditor !== vscode.window.activeTextEditor || e.selections.length !== 1) {
