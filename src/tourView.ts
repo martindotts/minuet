@@ -39,6 +39,8 @@ export class TourView implements vscode.TreeDataProvider<TourNode>, vscode.Dispo
     private readonly staleTracker: StaleTracker,
     private readonly stops: StopController,
     private readonly selection: StepSelection,
+    /** Whether the tour has changes that are not saved to its file. */
+    private readonly isDirty: () => boolean = () => false,
   ) {
     this.treeView = vscode.window.createTreeView(VIEW_ID, { treeDataProvider: this });
     this.disposables.push(
@@ -71,7 +73,9 @@ export class TourView implements vscode.TreeDataProvider<TourNode>, vscode.Dispo
 
   private refresh(): void {
     const meta = this.store.getMeta();
-    this.treeView.description = meta.title || undefined;
+    const dirty = this.isDirty();
+    this.treeView.description = [meta.title, dirty ? '●' : ''].filter(Boolean).join(' ') || undefined;
+    void vscode.commands.executeCommand('setContext', 'minuet.hasTour', this.store.count() > 0);
     const stop = this.stops.current;
     const annotation = stop ? this.store.get(stop.annotationId) : undefined;
     this.treeView.message = annotation ? `Stopped at step ${annotation.order}: ${annotation.title}` : undefined;

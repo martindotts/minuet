@@ -108,6 +108,35 @@
         "icon": "$(cloud-upload)"
       },
       {
+        "command": "minuet.saveTour",
+        "title": "Save Tour",
+        "category": "minuet",
+        "icon": "$(save)"
+      },
+      {
+        "command": "minuet.saveTourAs",
+        "title": "Save Tour As…",
+        "category": "minuet",
+        "icon": "$(save-as)"
+      },
+      {
+        "command": "minuet.closeTour",
+        "title": "Close Tour",
+        "category": "minuet",
+        "icon": "$(close)"
+      },
+      {
+        "command": "minuet.openSavedTour",
+        "title": "Open Saved Tour",
+        "category": "minuet"
+      },
+      {
+        "command": "minuet.refreshSavedTours",
+        "title": "Refresh Saved Tours",
+        "category": "minuet",
+        "icon": "$(refresh)"
+      },
+      {
         "command": "minuet.clearAll",
         "title": "Delete All Annotations",
         "category": "minuet",
@@ -172,6 +201,10 @@
         {
           "command": "minuet.focusStep",
           "when": "false"
+        },
+        {
+          "command": "minuet.openSavedTour",
+          "when": "false"
         }
       ],
       "editor/context": [
@@ -235,13 +268,33 @@
       ],
       "view/title": [
         {
-          "command": "minuet.importTour",
+          "command": "minuet.saveTour",
           "group": "navigation@1",
+          "when": "view == minuet.tour && minuet.hasTour"
+        },
+        {
+          "command": "minuet.closeTour",
+          "group": "navigation@2",
+          "when": "view == minuet.tour && minuet.hasTour"
+        },
+        {
+          "command": "minuet.saveTourAs",
+          "group": "2_file@1",
+          "when": "view == minuet.tour && minuet.hasTour"
+        },
+        {
+          "command": "minuet.refreshSavedTours",
+          "group": "navigation@1",
+          "when": "view == minuet.library"
+        },
+        {
+          "command": "minuet.importTour",
+          "group": "2_file@3",
           "when": "view == minuet.tour"
         },
         {
           "command": "minuet.exportTour",
-          "group": "navigation@2",
+          "group": "2_file@4",
           "when": "view == minuet.tour"
         },
         {
@@ -324,6 +377,12 @@
           "name": "Tour",
           "icon": "media/tour.svg",
           "contextualTitle": "minuet"
+        },
+        {
+          "id": "minuet.library",
+          "name": "Saved Tours",
+          "icon": "media/tour.svg",
+          "contextualTitle": "minuet"
         }
       ],
       "debug": [
@@ -340,6 +399,10 @@
       {
         "view": "minuet.tour",
         "contents": "There are no annotations in this workspace.\n[Import Tour](command:minuet.importTour)\nYou can also annotate a breakpoint from the editor: right-click the line number → **Annotate Breakpoint on This Line**."
+      },
+      {
+        "view": "minuet.library",
+        "contents": "No saved tours yet. Saved tours go to the .minuet folder of the project (setting minuet.toursFolder), so you can share them through git.\n[Save Tour](command:minuet.saveTour)"
       }
     ],
     "colors": [
@@ -391,6 +454,12 @@
           "type": "boolean",
           "default": true,
           "description": "When the cursor is placed on an annotated line, select that step in Tour and Current Step."
+        },
+        "minuet.toursFolder": {
+          "type": "string",
+          "default": ".minuet",
+          "scope": "resource",
+          "markdownDescription": "Folder where **Save Tour** writes tours and **Saved Tours** lists them. Relative to the first workspace folder, or an absolute path."
         }
       }
     }

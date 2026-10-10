@@ -55,7 +55,7 @@
 - **You run it for real.** Start the test in the debugger. At each step you see what happens, why it matters and
   the actual values, objects included.
 - **Nothing to set up in your repo.** Tours live in VS Code, like breakpoints. Nothing is written to the
-  repository unless you export it.
+  repository unless you save the tour to share it with your team.
 
 You can also build tours by hand, share them as JSON, and use them with any JS/TS program or test runner.
 
@@ -147,6 +147,8 @@ All commands are in the Command Palette (**minuet: …**). They are also in the 
 | **Edit Annotation** | Changes the title, comment, order, expressions or highlights. If the step is outdated, it can be re-anchored. |
 | **Delete Annotation** | Deletes the annotation. The breakpoint is kept. |
 | **Order Steps by Last Run** | Renumbers the tour following the order in which the last run stopped at each step. Steps that did not run go to the end. Shows the new order before applying it. |
+| **Save Tour / Save Tour As…** | Writes the tour to the tours folder (`.minuet/`). See [Saved tours](#saved-tours). |
+| **Close Tour** | Removes the tour and the breakpoints of its steps from VS Code. Its saved file is kept. Offers to save unsaved changes first. |
 | **Import Tour… / Export Tour…** | See [Import and export](#import-and-export). |
 | **Delete All Annotations** | Asks whether to delete only the annotations or their breakpoints too. |
 | **Install Agent Skill** | See [Using it with agents](#using-it-with-agents). |
@@ -167,7 +169,11 @@ The panel has its own icon in the Activity Bar. It shows:
 - during a session, the step where execution is **stopped**.
 
 Clicking a step opens the file at that line and shows it in Current Step. Step actions: move up, move down, edit
-and delete. Panel actions: import, export, order by execution, delete all and install the agent skill.
+and delete. Panel actions: save, close, save as, import, export, order by execution, delete all and install the
+agent skill. A ● next to the tour title means it has changes that are not saved.
+
+Below it, **Saved Tours** lists the tours of the tours folder. Click one to open it: the current tour is closed
+(offering to save it) and the saved one takes its place.
 
 ### The "Current Step" view
 
@@ -260,6 +266,24 @@ Notes:
 
 ---
 
+## Saved tours
+
+The tour you are working on lives in VS Code. To keep it, or to share it through git, save it:
+
+- **Save Tour** writes it to `.minuet/<name>.tour.json` (the name comes from the title; you can change it).
+  Once saved, Save writes to the same file. The folder is set with `minuet.toursFolder`.
+- Changes are **not written until you save**, so the file in git only changes when you mean it. Breakpoints that
+  move as you edit code do not touch the file either.
+- **Saved Tours** lists every tour in the folder, including the ones your teammates commit. It refreshes when the
+  files change (for example after a `git pull`).
+- Opening a saved tour or closing the current one removes the breakpoints of the tour that leaves, so only the
+  open tour's breakpoints stop your debug sessions.
+- Importing a file that is inside the tours folder opens it as that saved tour. Importing any other file starts
+  a new, unsaved tour.
+
+Saved tours use the same JSON as [Import and export](#tour-file-format), so agents and people can also write them
+by hand.
+
 ## Import and export
 
 - **Export Tour** saves all annotations to a JSON file chosen by the user. Paths are written relative to the
@@ -344,14 +368,15 @@ steps[3].file: file "src/foo.ts" does not exist (looked for /path/to/workspace/s
    in the view.
 7. Avoid expressions with side effects (calls that change state). They are evaluated in the real run.
 
-A complete example is in `examples/sample-node/tour.json`.
+A complete example is in `examples/sample-node/.minuet/orders.tour.json`.
 
 ---
 
 ## Where annotations are stored
 
-- In the extension's `workspaceState`: per workspace, on the user's machine, like breakpoints. **Nothing is
-  written to the repository** and nothing shows up in git, except what the user exports.
+- The open tour lives in the extension's `workspaceState`: per workspace, on the user's machine, like
+  breakpoints. **Nothing is written to the repository** and nothing shows up in git, except the tours the user
+  saves (in `.minuet/`) or exports.
 - Each annotation is linked to its breakpoint by file and line. Breakpoint ids change between sessions.
 - **Deleting the breakpoint deletes its annotation.** Deleting the annotation keeps the breakpoint.
 - If the breakpoint moves (for example, when lines are added above it), the annotation and its highlights move
@@ -369,6 +394,7 @@ A complete example is in `examples/sample-node/tour.json`.
 
 | Setting | Default | Description |
 | --- | --- | --- |
+| `minuet.toursFolder` | `.minuet` | Folder for saved tours. Relative to the first workspace folder, or absolute. |
 | `minuet.showCodeLens` | `true` | Show `◆ Step N of M · title` above each annotated line. |
 | `minuet.followCursor` | `true` | Select a step when the cursor is placed on its line. |
 | `minuet.suggestExecutionOrder` | `true` | When a session ends, offer to reorder if execution went through the steps in a different order. |
@@ -384,10 +410,10 @@ Colors can be changed in `workbench.colorCustomizations`:
 ## Sample project
 
 `examples/sample-node` has a module (`src/orders.js`) that builds the notification text of an order, a test
-(`node --test`) and a 5-step tour (`tour.json`).
+(`node --test`) and a 5-step saved tour (`.minuet/orders.tour.json`).
 
 1. Press **F5** in this project. A development window opens with the sample.
-2. **Tour** panel → **Import Tour** → `tour.json`.
+2. **Saved Tours** → click *How the order notification text is built*.
 3. **Run and Debug** → *Debug: orders test*.
 4. Execution stops at each step. **Continue** (F5) moves to the next one.
 
@@ -428,6 +454,7 @@ npm run package    # builds the .vsix
 | `src/webview/` | "Current Step" view (webview script and message protocol). |
 | `src/navigation.ts` | Opening a step in the editor. |
 | `src/importExport.ts` | Import and export. |
+| `src/library.ts` | Saved tours: the tours folder, the "Saved Tours" view, save, close and open. |
 | `src/commands.ts` | Commands. |
 | `src/uriHandler.ts` | `vscode://martindotts.minuet/import` URI. |
 | `src/agentSkills.ts` | Installs the skill for each agent. |

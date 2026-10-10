@@ -3,6 +3,7 @@ import { BreakpointSync } from './breakpointSync';
 import { StepCodeLensProvider } from './codeLens';
 import { CONTEXT_SCHEME, contextContentProvider, registerCommands } from './commands';
 import { StepDecorations } from './decorations';
+import { LibraryView, TourLibrary } from './library';
 import { StepSelection } from './selection';
 import { StaleTracker } from './staleTracker';
 import { StepView } from './stepView';
@@ -19,6 +20,7 @@ export interface MinuetApi {
   selection: StepSelection;
   stepView: StepView;
   decorations: StepDecorations;
+  library: TourLibrary;
 }
 
 export function activate(context: vscode.ExtensionContext): MinuetApi {
@@ -28,7 +30,9 @@ export function activate(context: vscode.ExtensionContext): MinuetApi {
   const stops = new StopController(store);
   const selection = new StepSelection(store, stops);
   const decorations = new StepDecorations(store, stops, selection);
-  const tourView = new TourView(store, staleTracker, stops, selection);
+  const library = new TourLibrary(store);
+  const libraryView = new LibraryView(library);
+  const tourView = new TourView(store, staleTracker, stops, selection, () => library.isDirty());
   const stepView = new StepView(context.extensionUri, store, staleTracker, stops, selection);
   const codeLens = new StepCodeLensProvider(store, staleTracker);
   const contextProvider = contextContentProvider(store);
@@ -40,17 +44,19 @@ export function activate(context: vscode.ExtensionContext): MinuetApi {
     stops,
     selection,
     decorations,
+    library,
+    libraryView,
     tourView,
     stepView,
     codeLens,
     contextProvider,
     vscode.workspace.registerTextDocumentContentProvider(CONTEXT_SCHEME, contextProvider),
     vscode.window.registerUriHandler(new MinuetUriHandler(store, staleTracker)),
-    ...registerCommands({ extensionUri: context.extensionUri, store, staleTracker, stops, selection, stepView }),
+    ...registerCommands({ extensionUri: context.extensionUri, store, staleTracker, stops, selection, stepView, library }),
   );
 
   breakpointSync.start();
-  return { store, staleTracker, stops, selection, stepView, decorations };
+  return { store, staleTracker, stops, selection, stepView, decorations, library };
 }
 
 export function deactivate(): void {

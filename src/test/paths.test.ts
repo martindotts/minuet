@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import * as path from 'path';
-import { normalizeFsPath, relativizePath, resolveTourPath } from '../paths';
+import { isDirectlyIn, normalizeFsPath, relativizePath, resolveToursFolder, resolveTourPath, tourFileName } from '../paths';
 
 const root = path.resolve('/work/mono');
 const other = path.resolve('/work/other');
@@ -42,5 +42,34 @@ suite('paths', () => {
   test('normalizeFsPath is case-insensitive only where the filesystem is', () => {
     assert.strictEqual(normalizeFsPath('/A/b.ts', 'darwin'), normalizeFsPath('/a/B.ts', 'darwin'));
     assert.notStrictEqual(normalizeFsPath('/A/b.ts', 'linux'), normalizeFsPath('/a/B.ts', 'linux'));
+  });
+});
+
+suite('paths: saved tours', () => {
+  const folders = [{ name: 'mono', fsPath: root }];
+
+  test('the tours folder defaults to .minuet in the first workspace folder', () => {
+    assert.strictEqual(resolveToursFolder(undefined, folders), path.join(root, '.minuet'));
+    assert.strictEqual(resolveToursFolder('  ', folders), path.join(root, '.minuet'));
+    assert.strictEqual(resolveToursFolder('docs/tours', folders), path.join(root, 'docs', 'tours'));
+  });
+
+  test('an absolute tours folder is used as is; a relative one needs an open folder', () => {
+    assert.strictEqual(resolveToursFolder(other, folders), other);
+    assert.strictEqual(resolveToursFolder('.minuet', []), undefined);
+  });
+
+  test('only files directly inside the folder belong to it', () => {
+    const folder = path.join(root, '.minuet');
+    assert.ok(isDirectlyIn(path.join(folder, 'a.tour.json'), folder));
+    assert.ok(!isDirectlyIn(path.join(folder, 'sub', 'a.tour.json'), folder));
+    assert.ok(!isDirectlyIn(path.join(root, 'a.tour.json'), folder));
+  });
+
+  test('file names come from the title', () => {
+    assert.strictEqual(tourFileName('How the order confirmation email is built'), 'how-the-order-confirmation-email-is-built');
+    assert.strictEqual(tourFileName('  Cómo se arma el envío — v2!  '), 'como-se-arma-el-envio-v2');
+    assert.strictEqual(tourFileName('???'), 'tour');
+    assert.ok(tourFileName('x'.repeat(100)).length <= 60);
   });
 });

@@ -1,4 +1,6 @@
 import * as assert from 'assert';
+import * as os from 'os';
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { MinuetApi } from '../extension';
 import { Annotation, EMPTY_META } from '../model';
@@ -28,6 +30,10 @@ function folder(): vscode.WorkspaceFolder {
   const f = vscode.workspace.workspaceFolders?.[0];
   assert.ok(f, 'the tests run with examples/sample-node as workspace');
   return f;
+}
+
+function sampleTourUri(): vscode.Uri {
+  return vscode.Uri.joinPath(folder().uri, '.minuet', 'orders.tour.json');
 }
 
 function ordersUri(): vscode.Uri {
@@ -70,8 +76,8 @@ suite('minuet (integration)', function () {
     vscode.debug.removeBreakpoints(vscode.debug.breakpoints);
   });
 
-  test('importing tour.json creates the steps, the breakpoints and the context', async () => {
-    const tourUri = vscode.Uri.joinPath(folder().uri, 'tour.json');
+  test('importing the sample tour creates the steps, the breakpoints and the context', async () => {
+    const tourUri = sampleTourUri();
     await vscode.commands.executeCommand('minuet.importTour', tourUri);
 
     const steps = api.store.all();
@@ -323,3 +329,93 @@ async function revert(doc: vscode.TextDocument): Promise<void> {
   await vscode.commands.executeCommand('workbench.action.files.revert');
   assert.strictEqual(doc.isDirty, false);
 }
+
+suite('minuet (saved tours)', function () {
+  this.timeout(60000);
+  let api: MinuetApi;
+  // A copy saved next to the sample tour; the sample itself is never written.
+  const savedUri = (): vscode.Uri => vscode.Uri.joinPath(folder().uri, '.minuet', 'test-copy.tour.json');
+  const outsideUri = (): vscode.Uri => vscode.Uri.file(path.join(os.tmpdir(), 'minuet-outside.tour.json'));
+  const readSaved = async (): Promise<{ title: string; steps: unknown[] }> =>
+    JSON.parse(new TextDecoder().decode(await vscode.workspace.fs.readFile(savedUri())));
+  const reset = async (): Promise<void> => {
+    await api.store.replaceAll([]);
+    await api.store.setMeta(EMPTY_META);
+    await api.store.setSource(undefined);
+    vscode.debug.removeBreakpoints(vscode.debug.breakpoints);
+    for (const uri of [savedUri(), outsideUri()]) {
+      await vscode.workspace.fs.delete(uri).then(undefined, () => undefined);
+    }
+  };
+
+  suiteSetup(async () => {
+    const extension = vscode.extensions.getExtension<MinuetApi>(EXTENSION_ID);
+    assert.ok(extension, 'extension is installed');
+    api = await extension.activate();
+    await reset();
+  });
+
+  suiteTeardown(() => reset());
+
+  test('the sample tour is listed in Saved Tours', async () => {
+    await waitFor(
+      () => api.library.saved.some((t) => t.uri.fsPath === sampleTourUri().fsPath && t.steps === 5),
+      'Saved Tours lists .minuet/orders.tour.json',
+    );
+  });
+
+  test('a tour imported from outside the tours folder starts unsaved', async () => {
+    await vscode.workspace.fs.copy(sampleTourUri(), outsideUri(), { overwrite: true });
+    await vscode.commands.executeCommand('minuet.importTour', outsideUri());
+    assert.strictEqual(api.store.count(), 5);
+    assert.strictEqual(api.store.getSource(), undefined);
+    assert.ok(api.library.isDirty());
+  });
+
+  test('a tour imported from the tours folder opens as that saved tour', async () => {
+    await reset();
+    await vscode.commands.executeCommand('minuet.importTour', sampleTourUri());
+    assert.ok(api.library.isOpen(sampleTourUri()));
+    assert.ok(!api.library.isDirty());
+  });
+
+  test('saving to a new file writes it and lists it', async () => {
+    await vscode.commands.executeCommand('minuet.saveTour', savedUri());
+    const saved = await readSaved();
+    assert.match(saved.title, /notification/);
+    assert.strictEqual(saved.steps.length, 5);
+    assert.ok(!api.library.isDirty(), 'nothing left to save');
+    assert.ok(api.library.isOpen(savedUri()));
+    await waitFor(
+      () => api.library.saved.some((t) => t.uri.fsPath === savedUri().fsPath && t.steps === 5),
+      'Saved Tours lists the new file',
+    );
+  });
+
+  test('changes stay out of the file until saving again', async () => {
+    await api.store.setMeta({ ...api.store.getMeta(), title: 'Order notification, revised' });
+    assert.ok(api.library.isDirty());
+    assert.match((await readSaved()).title, /^How/, 'the file still has the old title');
+
+    await vscode.commands.executeCommand('minuet.saveTour');
+    assert.strictEqual((await readSaved()).title, 'Order notification, revised');
+    assert.ok(!api.library.isDirty());
+  });
+
+  test('closing a saved tour removes its annotations and breakpoints, not its file', async () => {
+    await vscode.commands.executeCommand('minuet.closeTour');
+    assert.strictEqual(api.store.count(), 0);
+    assert.strictEqual(api.store.getSource(), undefined);
+    await waitFor(() => breakpointLines().length === 0, 'the breakpoints of the tour are removed');
+    assert.strictEqual((await readSaved()).steps.length, 5);
+  });
+
+  test('opening a saved tour brings back its steps and breakpoints', async () => {
+    await vscode.commands.executeCommand('minuet.openSavedTour', savedUri());
+    assert.strictEqual(api.store.count(), 5);
+    assert.strictEqual(api.store.getMeta().title, 'Order notification, revised');
+    assert.deepStrictEqual(breakpointLines(), [13, 19, 28, 31, 33]);
+    assert.ok(api.library.isOpen(savedUri()));
+    assert.ok(!api.library.isDirty());
+  });
+});

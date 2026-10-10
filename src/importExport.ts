@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto';
 import * as vscode from 'vscode';
 import { findBreakpointAt, newBreakpoint } from './breakpointSync';
 import { Annotation, TourMeta } from './model';
-import { FolderRef, relativizePath, resolveTourPath } from './paths';
+import { FolderRef, isDirectlyIn, relativizePath, resolveToursFolder, resolveTourPath } from './paths';
 import { readLine, StaleTracker } from './staleTracker';
 import { AnnotationStore } from './store';
 import { buildTourFile, parseTourJson, serializeTour, stepToAnnotation, TourFile } from './tourFormat';
@@ -10,6 +10,21 @@ import { VIEW_ID } from './tourView';
 
 function workspaceFolders(): FolderRef[] {
   return (vscode.workspace.workspaceFolders ?? []).map((f) => ({ name: f.name, fsPath: f.uri.fsPath }));
+}
+
+/** Folder of saved tours (`minuet.toursFolder`), or undefined when it is relative and no folder is open. */
+export function toursFolder(): vscode.Uri | undefined {
+  const setting = vscode.workspace.getConfiguration('minuet').get<string>('toursFolder');
+  const fsPath = resolveToursFolder(setting, workspaceFolders());
+  return fsPath ? vscode.Uri.file(fsPath) : undefined;
+}
+
+/** The current tour in the file format, as Save and Export write it. */
+export function serializeCurrentTour(store: AnnotationStore): string {
+  const folders = workspaceFolders();
+  return serializeTour(
+    buildTourFile(store.all(), store.getMeta(), (uri) => relativizePath(vscode.Uri.parse(uri).fsPath, folders)),
+  );
 }
 
 async function fileExists(uri: vscode.Uri): Promise<boolean> {
@@ -52,6 +67,8 @@ export interface ImportOptions {
    * always ask before touching anything, even when there are no annotations yet.
    */
   external?: boolean;
+  /** Replace the current tour without asking (opening a saved tour, after closing the current one). */
+  replace?: boolean;
 }
 
 export async function importTour(
@@ -59,7 +76,7 @@ export async function importTour(
   staleTracker: StaleTracker,
   source?: vscode.Uri,
   options: ImportOptions = {},
-): Promise<void> {
+): Promise<boolean> {
   let uri = source;
   if (!uri) {
     const picked = await vscode.window.showOpenDialog({
@@ -72,7 +89,7 @@ export async function importTour(
     uri = picked?.[0];
   }
   if (!uri) {
-    return;
+    return false;
   }
 
   let text: string;
@@ -80,20 +97,20 @@ export async function importTour(
     text = new TextDecoder('utf-8').decode(await vscode.workspace.fs.readFile(uri));
   } catch (err) {
     await showErrors('Could not read the tour file.', [err instanceof Error ? err.message : String(err)]);
-    return;
+    return false;
   }
 
   const parsed = parseTourJson(text);
   if (!parsed.ok) {
     await showErrors(`The tour is not valid: ${vscode.workspace.asRelativePath(uri)}`, parsed.errors);
-    return;
+    return false;
   }
   const tour = parsed.tour;
 
   const resolved = await resolveFiles(tour);
   if ('errors' in resolved) {
     await showErrors('Could not import the tour: files are missing.', resolved.errors);
-    return;
+    return false;
   }
 
   const origin = options.external
@@ -108,9 +125,9 @@ export async function importTour(
       accept,
     );
     if (choice !== accept) {
-      return;
+      return false;
     }
-  } else if (store.count() > 0) {
+  } else if (store.count() > 0 && !options.replace) {
     const replace = 'Replace';
     const add = 'Append';
     const choice = await vscode.window.showWarningMessage(
@@ -126,7 +143,7 @@ export async function importTour(
       add,
     );
     if (!choice) {
-      return;
+      return false;
     }
     append = choice === add;
   }
@@ -168,6 +185,13 @@ export async function importTour(
     vscode.debug.addBreakpoints(breakpoints);
   }
 
+  if (!append) {
+    // A tour opened from the tours folder is that saved tour; any other file starts an unsaved one.
+    const folder = toursFolder();
+    const saved = folder && isDirectlyIn(uri.fsPath, folder.fsPath);
+    await store.setSource(saved ? { file: uri.fsPath, snapshot: serializeCurrentTour(store) } : undefined);
+  }
+
   await staleTracker.refresh();
   const stale = created.filter((a) => staleTracker.isStale(a.id)).length;
   const parts = [`Tour imported: ${created.length} ${created.length === 1 ? 'step' : 'steps'}.`];
@@ -179,6 +203,7 @@ export async function importTour(
   }
   void vscode.commands.executeCommand(`${VIEW_ID}.focus`);
   void (stale > 0 ? vscode.window.showWarningMessage(parts.join(' ')) : vscode.window.showInformationMessage(parts.join(' ')));
+  return true;
 }
 
 export async function exportTour(store: AnnotationStore): Promise<void> {
@@ -196,12 +221,10 @@ export async function exportTour(store: AnnotationStore): Promise<void> {
   if (!target) {
     return;
   }
-  const folders = workspaceFolders();
-  const tour = buildTourFile(store.all(), store.getMeta(), (uri) => relativizePath(vscode.Uri.parse(uri).fsPath, folders));
-  await vscode.workspace.fs.writeFile(target, new TextEncoder().encode(serializeTour(tour)));
+  await vscode.workspace.fs.writeFile(target, new TextEncoder().encode(serializeCurrentTour(store)));
   const open = 'Open';
   const choice = await vscode.window.showInformationMessage(
-    `Tour exported (${tour.steps.length} steps): ${vscode.workspace.asRelativePath(target)}`,
+    `Tour exported (${store.count()} steps): ${vscode.workspace.asRelativePath(target)}`,
     open,
   );
   if (choice === open) {

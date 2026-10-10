@@ -55,3 +55,38 @@ export function normalizeFsPath(p: string, platform: NodeJS.Platform = process.p
   const normalized = path.normalize(p);
   return platform === 'darwin' || platform === 'win32' ? normalized.toLowerCase() : normalized;
 }
+
+export const DEFAULT_TOURS_FOLDER = '.minuet';
+
+/**
+ * Folder where saved tours live: the `minuet.toursFolder` setting, relative to the first workspace
+ * folder unless absolute. Undefined when it is relative and no folder is open.
+ */
+export function resolveToursFolder(setting: string | undefined, folders: readonly FolderRef[]): string | undefined {
+  const value = setting?.trim() || DEFAULT_TOURS_FOLDER;
+  if (path.isAbsolute(value)) {
+    return path.normalize(value);
+  }
+  if (folders.length === 0) {
+    return undefined;
+  }
+  return path.join(folders[0].fsPath, value);
+}
+
+/** True when the file sits directly inside the folder. */
+export function isDirectlyIn(file: string, folder: string, platform: NodeJS.Platform = process.platform): boolean {
+  return normalizeFsPath(path.dirname(file), platform) === normalizeFsPath(folder, platform);
+}
+
+/** File name (without extension) for a saved tour, from its title: "Cómo se arma" → "como-se-arma". */
+export function tourFileName(title: string): string {
+  const slug = title
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+/, '')
+    .slice(0, 60)
+    .replace(/-+$/, '');
+  return slug || 'tour';
+}

@@ -3,6 +3,15 @@ import { Annotation, EMPTY_META, TourMeta, renumber, sortByOrder } from './model
 
 const ANNOTATIONS_KEY = 'minuet.annotations';
 const META_KEY = 'minuet.tourMeta';
+const SOURCE_KEY = 'minuet.tourSource';
+
+/** The saved tour file the current tour was opened from or last saved to. */
+export interface TourSource {
+  /** fsPath of the file. */
+  file: string;
+  /** The tour as it was written to the file, to tell whether there are unsaved changes. */
+  snapshot: string;
+}
 
 /** Annotations persisted in the extension's workspaceState (never in the user's repository). */
 export class AnnotationStore implements vscode.Disposable {
@@ -11,10 +20,12 @@ export class AnnotationStore implements vscode.Disposable {
 
   private annotations: Annotation[];
   private meta: TourMeta;
+  private source: TourSource | undefined;
 
   constructor(private readonly state: vscode.Memento) {
     this.annotations = renumber(state.get<Annotation[]>(ANNOTATIONS_KEY, []));
     this.meta = { ...EMPTY_META, ...state.get<TourMeta>(META_KEY, EMPTY_META) };
+    this.source = state.get<TourSource>(SOURCE_KEY);
   }
 
   /** All annotations sorted by order. */
@@ -28,6 +39,10 @@ export class AnnotationStore implements vscode.Disposable {
 
   getMeta(): TourMeta {
     return this.meta;
+  }
+
+  getSource(): TourSource | undefined {
+    return this.source;
   }
 
   count(): number {
@@ -79,6 +94,12 @@ export class AnnotationStore implements vscode.Disposable {
   async setMeta(meta: TourMeta): Promise<void> {
     this.meta = meta;
     await this.state.update(META_KEY, meta);
+    this.changeEmitter.fire();
+  }
+
+  async setSource(source: TourSource | undefined): Promise<void> {
+    this.source = source;
+    await this.state.update(SOURCE_KEY, source);
     this.changeEmitter.fire();
   }
 

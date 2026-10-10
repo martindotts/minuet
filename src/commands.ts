@@ -4,6 +4,7 @@ import { installAgentSkill } from './agentSkills';
 import { findBreakpointAt, findBreakpointById, newBreakpoint } from './breakpointSync';
 import { isInExecutionOrder, orderByExecution } from './executionOrder';
 import { exportTour, importTour } from './importExport';
+import { closeCurrentTour, openSavedTour, saveTour, TourLibrary } from './library';
 import { Annotation, Highlight, sortByOrder } from './model';
 import { toOneBased, toZeroBased } from './lines';
 import { openStep, selectionLines } from './navigation';
@@ -24,6 +25,7 @@ interface Services {
   stops: StopController;
   selection: StepSelection;
   stepView: StepView;
+  library: TourLibrary;
 }
 
 interface Target {
@@ -431,6 +433,7 @@ async function clearAll(services: Services): Promise<void> {
     .filter((bp): bp is vscode.SourceBreakpoint => bp !== undefined);
   await store.replaceAll([]);
   await store.setMeta({ title: '', context: '' });
+  await store.setSource(undefined);
   if (choice === withBreakpoints && breakpoints.length > 0) {
     vscode.debug.removeBreakpoints(breakpoints);
   }
@@ -557,6 +560,21 @@ export function registerCommands(services: Services): vscode.Disposable[] {
     register('moveDown', (arg) => moveStep(services, arg, 1)),
     register('importTour', (arg) => importTour(store, staleTracker, arg instanceof vscode.Uri ? arg : undefined)),
     register('exportTour', () => exportTour(store)),
+    register('saveTour', (arg) =>
+      arg instanceof vscode.Uri ? saveTour(store, services.library, false, arg) : saveTour(store, services.library),
+    ),
+    register('saveTourAs', () => saveTour(store, services.library, true)),
+    register('closeTour', async () => {
+      if (store.count() === 0) {
+        void vscode.window.showInformationMessage('No tour is open.');
+        return;
+      }
+      await closeCurrentTour(store, services.library);
+    }),
+    register('openSavedTour', (arg) =>
+      arg instanceof vscode.Uri ? openSavedTour(store, staleTracker, services.library, arg) : undefined,
+    ),
+    register('refreshSavedTours', () => services.library.refresh()),
     register('clearAll', () => clearAll(services)),
     register('orderByExecution', () => orderStepsByExecution(services)),
     stops.onDidFinishRun((hits) => void suggestExecutionOrder(services, hits)),
