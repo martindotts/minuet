@@ -1,10 +1,53 @@
-# Stepwise
+<p align="center">
+  <img src="media/icon.png" width="112" alt="Stepwise">
+</p>
 
-**Step-by-step debugging, explained.**
+<h1 align="center">Stepwise</h1>
 
-Ask your AI agent how a piece of code works and get a guided tour you can actually run. Stepwise turns the
-breakpoints of the VS Code JavaScript/TypeScript debugger into explained steps: each one with a comment,
-highlighted code and the **real values** of that run.
+<p align="center">
+  <strong>Step-by-step debugging, explained.</strong><br>
+  Ask your AI agent how a piece of code works. Get a guided tour you run in the VS Code debugger,<br>
+  with the real values of that run.
+</p>
+
+<p align="center">
+  <a href="https://github.com/martindotts/stepwise/releases"><img src="https://img.shields.io/github/v/release/martindotts/stepwise?include_prereleases&label=release&color=6a32a0" alt="Release"></a>
+  <a href="https://github.com/martindotts/stepwise/actions/workflows/release.yml"><img src="https://github.com/martindotts/stepwise/actions/workflows/release.yml/badge.svg" alt="Build"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/martindotts/stepwise?color=6a32a0" alt="License: MIT"></a>
+  <img src="https://img.shields.io/badge/VS%20Code-1.90%2B-6a32a0" alt="VS Code 1.90+">
+</p>
+
+<p align="center">
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#how-it-works">How it works</a> ·
+  <a href="#using-it-with-agents-claude-code">Agents</a> ·
+  <a href="#tour-file-format">Tour format</a> ·
+  <a href="https://github.com/martindotts/stepwise/releases">Releases</a>
+</p>
+
+---
+
+## Quick start
+
+1. **Install.** Download the `.vsix` of the latest build from
+   [Releases](https://github.com/martindotts/stepwise/releases) and run:
+
+   ```bash
+   code --install-extension stepwise-*.vsix
+   ```
+
+   Or in VS Code: **Extensions → … → Install from VSIX…** Requires VS Code 1.90 or later.
+
+2. **Install the Claude Code skill** (once): Command Palette → **Stepwise: Install Claude Code Skill**.
+
+3. **Ask your agent:**
+
+   > Explain with Stepwise how the order confirmation email is built
+
+4. **Run it.** Accept the import and start the test the agent picked in the debugger. Each stop shows the step,
+   its explanation and the real values.
+
+## Why Stepwise
 
 - **Your agent builds the tour.** It reads the code, picks the steps, finds (or writes) a test that runs the flow
   and imports the tour into VS Code. You confirm once.
@@ -34,17 +77,39 @@ It is not a new debugger. Execution is the usual one (a program, a vitest/jest/m
 
 ---
 
-## Installation
+## Using it with agents (Claude Code)
 
-From a `.vsix`:
+An agent can build the whole tour: it reads the code, decides what to run, writes the tour JSON and imports it
+into VS Code. To run the flow it first looks for an existing test that goes through it; if there is none, it
+creates a temporary one and tells you. You accept the import and run the test in the debugger.
 
-```bash
-code --install-extension stepwise-0.1.0.vsix
+1. **Install the skill** (once): Command Palette → **Stepwise: Install Claude Code Skill**, or from the
+   `…` menu of the Tour panel. It copies `SKILL.md` to `~/.claude/skills/stepwise/`, so it works in any
+   repository. It contains the format, the rules of the guide for agents and the whole procedure. Claude Code
+   picks it up in new sessions.
+2. **Ask the agent**, for example: *"Explain with Stepwise how the order confirmation email is built"*.
+3. **The agent imports the tour** by opening a URI of the extension. VS Code always asks you to confirm before
+   importing.
+
+### Import URI
+
+```
+vscode://martinthompson.stepwise/import?file=<absolute, URL-encoded path of the JSON>
 ```
 
-Or in VS Code: **Extensions → … → Install from VSIX…**
+For example, from a terminal on macOS:
 
-Requires VS Code 1.90 or later.
+```bash
+open "vscode://martinthompson.stepwise/import?file=%2Ftmp%2Fmy.tour.json"
+```
+
+On Linux use `xdg-open`, on Windows `Start-Process`.
+
+- The path must be absolute. Step paths inside the JSON are resolved against the folder open in the window that
+  receives the URI.
+- With several VS Code windows open, the URI goes to the one that last had focus.
+- The development window (F5) and an installation from the `.vsix` register the same URI. To try it with F5,
+  keep the development window in front.
 
 ---
 
@@ -264,42 +329,6 @@ A complete example is in `examples/sample-node/tour.json`.
 
 ---
 
-## Using it with agents (Claude Code)
-
-An agent can build the whole tour: it reads the code, decides what to run, writes the tour JSON and imports it
-into VS Code. To run the flow it first looks for an existing test that goes through it; if there is none, it
-creates a temporary one and tells you. You accept the import and run the test in the debugger.
-
-1. **Install the skill** (once): Command Palette → **Stepwise: Install Claude Code Skill**, or from the
-   `…` menu of the Tour panel. It copies `SKILL.md` to `~/.claude/skills/stepwise/`, so it works in any
-   repository. It contains the format, the rules of the guide for agents and the whole procedure. Claude Code
-   picks it up in new sessions.
-2. **Ask the agent**, for example: *"Explain with Stepwise how the order confirmation email is built"*.
-3. **The agent imports the tour** by opening a URI of the extension. VS Code always asks you to confirm before
-   importing.
-
-### Import URI
-
-```
-vscode://martinthompson.stepwise/import?file=<absolute, URL-encoded path of the JSON>
-```
-
-For example, from a terminal on macOS:
-
-```bash
-open "vscode://martinthompson.stepwise/import?file=%2Ftmp%2Fmy.tour.json"
-```
-
-On Linux use `xdg-open`, on Windows `Start-Process`.
-
-- The path must be absolute. Step paths inside the JSON are resolved against the folder open in the window that
-  receives the URI.
-- With several VS Code windows open, the URI goes to the one that last had focus.
-- The development window (F5) and an installation from the `.vsix` register the same URI. To try it with F5,
-  keep the development window in front.
-
----
-
 ## Where annotations are stored
 
 - In the extension's `workspaceState`: per workspace, on the user's machine, like breakpoints. **Nothing is
@@ -355,7 +384,8 @@ npm test           # unit and integration tests (includes a real debug session o
 npm run package    # builds the .vsix
 ```
 
-Structure:
+<details>
+<summary><strong>Source structure</strong></summary>
 
 | File | Responsibility |
 | --- | --- |
@@ -382,6 +412,8 @@ Structure:
 | `src/commands.ts` | Commands. |
 | `src/uriHandler.ts` | `vscode://martinthompson.stepwise/import` URI. |
 | `resources/claude-skill/SKILL.md` | Claude Code skill installed by the command. |
+
+</details>
 
 ### Troubleshooting
 

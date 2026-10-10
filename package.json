@@ -9,6 +9,18 @@
     "name": "Martin Thompson"
   },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/martindotts/stepwise.git"
+  },
+  "homepage": "https://github.com/martindotts/stepwise#readme",
+  "bugs": {
+    "url": "https://github.com/martindotts/stepwise/issues"
+  },
+  "galleryBanner": {
+    "color": "#46196f",
+    "theme": "dark"
+  },
   "keywords": [
     "debugger",
     "breakpoints",
