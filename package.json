@@ -1,0 +1,405 @@
+{
+  "name": "stepwise",
+  "displayName": "Stepwise",
+  "description": "Step-by-step debugging, explained: your AI agent turns breakpoints into a guided tour of any JavaScript/TypeScript flow, with the real values of the run.",
+  "version": "0.1.0",
+  "publisher": "martinthompson",
+  "author": {
+    "name": "Martin Thompson"
+  },
+  "license": "MIT",
+  "keywords": [
+    "debugger",
+    "breakpoints",
+    "annotations",
+    "tour",
+    "walkthrough",
+    "javascript",
+    "typescript",
+    "vitest",
+    "ai",
+    "agent",
+    "claude",
+    "explain"
+  ],
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Debuggers",
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onUri"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "stepwise.annotateLine",
+        "title": "Annotate Breakpoint on This Line",
+        "category": "Stepwise",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "stepwise.addHighlight",
+        "title": "Highlight Selection in Annotation...",
+        "category": "Stepwise",
+        "icon": "$(symbol-color)"
+      },
+      {
+        "command": "stepwise.addWatch",
+        "title": "Add Expression to Evaluate...",
+        "category": "Stepwise",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "stepwise.editAnnotation",
+        "title": "Edit Annotation",
+        "category": "Stepwise",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "stepwise.deleteAnnotation",
+        "title": "Delete Annotation",
+        "category": "Stepwise",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "stepwise.moveUp",
+        "title": "Move Step Up",
+        "category": "Stepwise",
+        "icon": "$(arrow-up)"
+      },
+      {
+        "command": "stepwise.moveDown",
+        "title": "Move Step Down",
+        "category": "Stepwise",
+        "icon": "$(arrow-down)"
+      },
+      {
+        "command": "stepwise.importTour",
+        "title": "Import Tour...",
+        "category": "Stepwise",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "stepwise.exportTour",
+        "title": "Export Tour...",
+        "category": "Stepwise",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "stepwise.clearAll",
+        "title": "Delete All Annotations",
+        "category": "Stepwise",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "stepwise.installClaudeSkill",
+        "title": "Install Claude Code Skill",
+        "category": "Stepwise",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "stepwise.orderByExecution",
+        "title": "Order Steps by Last Run",
+        "category": "Stepwise",
+        "icon": "$(list-ordered)"
+      },
+      {
+        "command": "stepwise.openStep",
+        "title": "Open Step",
+        "category": "Stepwise"
+      },
+      {
+        "command": "stepwise.focusStep",
+        "title": "Show Step",
+        "category": "Stepwise"
+      },
+      {
+        "command": "stepwise.showContext",
+        "title": "Show Tour Context",
+        "category": "Stepwise"
+      }
+    ],
+    "submenus": [
+      {
+        "id": "stepwise.editorMenu",
+        "label": "Stepwise"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "stepwise.moveUp",
+          "when": "false"
+        },
+        {
+          "command": "stepwise.moveDown",
+          "when": "false"
+        },
+        {
+          "command": "stepwise.openStep",
+          "when": "false"
+        },
+        {
+          "command": "stepwise.showContext",
+          "when": "false"
+        },
+        {
+          "command": "stepwise.addHighlight",
+          "when": "editorIsOpen"
+        },
+        {
+          "command": "stepwise.focusStep",
+          "when": "false"
+        }
+      ],
+      "editor/context": [
+        {
+          "submenu": "stepwise.editorMenu",
+          "group": "stepwise@1",
+          "when": "resourceScheme == file"
+        }
+      ],
+      "stepwise.editorMenu": [
+        {
+          "command": "stepwise.annotateLine",
+          "group": "1_create@1"
+        },
+        {
+          "command": "stepwise.addHighlight",
+          "group": "1_create@2",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "stepwise.addWatch",
+          "group": "1_create@3"
+        },
+        {
+          "command": "stepwise.editAnnotation",
+          "group": "2_edit@1"
+        },
+        {
+          "command": "stepwise.deleteAnnotation",
+          "group": "2_edit@2"
+        }
+      ],
+      "editor/lineNumber/context": [
+        {
+          "command": "stepwise.annotateLine",
+          "group": "stepwise@1",
+          "when": "resourceScheme == file"
+        },
+        {
+          "command": "stepwise.addWatch",
+          "group": "stepwise@2",
+          "when": "resourceScheme == file"
+        },
+        {
+          "command": "stepwise.editAnnotation",
+          "group": "stepwise@3",
+          "when": "resourceScheme == file"
+        },
+        {
+          "command": "stepwise.deleteAnnotation",
+          "group": "stepwise@4",
+          "when": "resourceScheme == file"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "stepwise.importTour",
+          "group": "stepwise@1",
+          "when": "resourceExtname == .json"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "stepwise.importTour",
+          "group": "navigation@1",
+          "when": "view == stepwise.tour"
+        },
+        {
+          "command": "stepwise.exportTour",
+          "group": "navigation@2",
+          "when": "view == stepwise.tour"
+        },
+        {
+          "command": "stepwise.orderByExecution",
+          "group": "1_order@1",
+          "when": "view == stepwise.tour"
+        },
+        {
+          "command": "stepwise.clearAll",
+          "group": "z_danger@1",
+          "when": "view == stepwise.tour"
+        },
+        {
+          "command": "stepwise.installClaudeSkill",
+          "group": "y_agents@1",
+          "when": "view == stepwise.tour"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "stepwise.moveUp",
+          "group": "inline@1",
+          "when": "view == stepwise.tour && viewItem == step"
+        },
+        {
+          "command": "stepwise.moveDown",
+          "group": "inline@2",
+          "when": "view == stepwise.tour && viewItem == step"
+        },
+        {
+          "command": "stepwise.editAnnotation",
+          "group": "inline@3",
+          "when": "view == stepwise.tour && viewItem == step"
+        },
+        {
+          "command": "stepwise.deleteAnnotation",
+          "group": "inline@4",
+          "when": "view == stepwise.tour && viewItem == step"
+        },
+        {
+          "command": "stepwise.addWatch",
+          "group": "1_edit@1",
+          "when": "view == stepwise.tour && viewItem == step"
+        },
+        {
+          "command": "stepwise.editAnnotation",
+          "group": "1_edit@2",
+          "when": "view == stepwise.tour && viewItem == step"
+        },
+        {
+          "command": "stepwise.moveUp",
+          "group": "2_order@1",
+          "when": "view == stepwise.tour && viewItem == step"
+        },
+        {
+          "command": "stepwise.moveDown",
+          "group": "2_order@2",
+          "when": "view == stepwise.tour && viewItem == step"
+        },
+        {
+          "command": "stepwise.deleteAnnotation",
+          "group": "3_delete@1",
+          "when": "view == stepwise.tour && viewItem == step"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "stepwise",
+          "title": "Stepwise",
+          "icon": "media/tour.svg"
+        }
+      ]
+    },
+    "views": {
+      "stepwise": [
+        {
+          "id": "stepwise.tour",
+          "name": "Tour",
+          "icon": "media/tour.svg",
+          "contextualTitle": "Stepwise"
+        }
+      ],
+      "debug": [
+        {
+          "type": "webview",
+          "id": "stepwise.step",
+          "name": "Current Step",
+          "contextualTitle": "Stepwise",
+          "visibility": "visible"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "stepwise.tour",
+        "contents": "There are no annotations in this workspace.\n[Import Tour](command:stepwise.importTour)\nYou can also annotate a breakpoint from the editor: right-click the line number → **Annotate Breakpoint on This Line**."
+      }
+    ],
+    "colors": [
+      {
+        "id": "stepwise.highlightBackground",
+        "description": "Background of the highlighted ranges of the current step.",
+        "defaults": {
+          "dark": "#b180d714",
+          "light": "#652d900d",
+          "highContrast": "#b180d733",
+          "highContrastLight": "#652d901a"
+        }
+      },
+      {
+        "id": "stepwise.highlightBorder",
+        "description": "Left border of the highlighted ranges of the current step.",
+        "defaults": {
+          "dark": "#b180d7a0",
+          "light": "#652d9080",
+          "highContrast": "#b180d7",
+          "highContrastLight": "#652d90"
+        }
+      },
+      {
+        "id": "stepwise.noteForeground",
+        "description": "Color of a highlight note.",
+        "defaults": {
+          "dark": "editorCodeLens.foreground",
+          "light": "editorCodeLens.foreground",
+          "highContrast": "editorCodeLens.foreground",
+          "highContrastLight": "editorCodeLens.foreground"
+        }
+      }
+    ],
+    "configuration": {
+      "title": "Stepwise",
+      "properties": {
+        "stepwise.suggestExecutionOrder": {
+          "type": "boolean",
+          "default": true,
+          "description": "When a debug session ends, offer to reorder the tour if execution went through the steps in a different order."
+        },
+        "stepwise.showCodeLens": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show \"◆ Step N of M · title\" above each annotated line. Clicking it shows the step in Current Step."
+        },
+        "stepwise.followCursor": {
+          "type": "boolean",
+          "default": true,
+          "description": "When the cursor is placed on an annotated line, select that step in Tour and Current Step."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package-bundle",
+    "compile": "npm run check-types && npm run lint && node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "package-bundle": "npm run check-types && npm run lint && node esbuild.js --production",
+    "package": "vsce package --no-dependencies --allow-missing-repository",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src",
+    "compile-tests": "node -e \"require('fs').rmSync('out',{recursive:true,force:true})\" && tsc -p . --outDir out",
+    "pretest": "npm run compile-tests && npm run compile",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^20.19.43",
+    "@types/vscode": "^1.90.0",
+    "@vscode/test-cli": "^0.0.15",
+    "@vscode/test-electron": "^3.1.0",
+    "@vscode/vsce": "^4.0.0",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.12.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.71.1"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "sample-node",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sample project to try Stepwise.",
+  "scripts": {
+    "test": "node --test"
+  }
+}
