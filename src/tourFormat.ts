@@ -1,8 +1,8 @@
-import { Annotation, Highlight, TourMeta, sortByOrder } from './model';
+import { Annotation, CONTENT_FILE_EXTENSIONS, Content, Highlight, TourMeta, sortByOrder } from './model';
 import { toOneBased, toZeroBased } from './lines';
 
 /**
- * Import/export file format (the contract used by agents). All lines are 1-based.
+ * Tour file format (the contract used by agents). All lines are 1-based.
  * See README.md, section "Tour file format".
  */
 export interface TourFileHighlight {
@@ -18,7 +18,7 @@ export interface TourFileStep {
   line: number;
   anchorText?: string;
   title: string;
-  comment: string;
+  content: Content;
   highlights: TourFileHighlight[];
   watches: string[];
 }
@@ -26,7 +26,7 @@ export interface TourFileStep {
 export interface TourFile {
   version: 1;
   title: string;
-  context: string;
+  context: Content;
   steps: TourFileStep[];
 }
 
@@ -140,8 +140,9 @@ export function validateTour(raw: unknown): ParseResult {
   if (raw.title !== undefined && typeof raw.title !== 'string') {
     fail('title', 'must be a string', raw.title);
   }
-  if (raw.context !== undefined && typeof raw.context !== 'string') {
-    fail('context', 'must be a string (markdown)', raw.context);
+  const contextError = contentError(raw.context);
+  if (contextError) {
+    fail('context', contextError, raw.context);
   }
   if (!Array.isArray(raw.steps)) {
     fail('steps', 'must be a list of steps', raw.steps);
@@ -188,8 +189,9 @@ export function validateTour(raw: unknown): ParseResult {
     if (typeof s.title !== 'string' || s.title.trim() === '') {
       fail(`${p}.title`, 'must be a non-empty string', s.title);
     }
-    if (s.comment !== undefined && typeof s.comment !== 'string') {
-      fail(`${p}.comment`, 'must be a string (markdown)', s.comment);
+    const stepContentError = contentError(s.content);
+    if (stepContentError) {
+      fail(`${p}.content`, stepContentError, s.content);
     }
 
     const highlights: TourFileHighlight[] = [];
@@ -248,7 +250,7 @@ export function validateTour(raw: unknown): ParseResult {
         file: (s.file as string).trim(),
         line: s.line as number,
         title: (s.title as string).trim(),
-        comment: (s.comment as string | undefined) ?? '',
+        content: toContent(s.content),
         highlights,
         watches,
       };
@@ -272,10 +274,32 @@ export function validateTour(raw: unknown): ParseResult {
     tour: {
       version: 1,
       title: (raw.title as string | undefined) ?? '',
-      context: (raw.context as string | undefined) ?? '',
+      context: toContent(raw.context),
       steps: [...steps].sort((a, b) => a.order - b.order),
     },
   };
+}
+
+/** Why a `content` (or `context`) value is not valid, or undefined when it is (or is missing). */
+function contentError(value: unknown): string | undefined {
+  if (value === undefined || typeof value === 'string') {
+    return undefined;
+  }
+  if (!isPlainObject(value) || typeof value.file !== 'string' || value.file.trim() === '') {
+    return 'must be markdown text, or { "file": "<path to a .md or .html file>" }';
+  }
+  const file = value.file.trim().toLowerCase();
+  if (!CONTENT_FILE_EXTENSIONS.some((ext) => file.endsWith(ext))) {
+    return `"file" must be a ${CONTENT_FILE_EXTENSIONS.join(', ')} file`;
+  }
+  return undefined;
+}
+
+function toContent(value: unknown): Content {
+  if (isPlainObject(value) && typeof value.file === 'string') {
+    return { file: value.file.trim() };
+  }
+  return typeof value === 'string' ? value : '';
 }
 
 /** Converts file highlights (1-based) to internal highlights (0-based). */
@@ -316,7 +340,7 @@ export function stepToAnnotation(
     anchorText: (step.anchorText ?? currentLineText ?? '').trim(),
     order: step.order,
     title: step.title,
-    comment: step.comment,
+    content: step.content,
     highlights: highlightsFromFile(step.highlights),
     watches: [...step.watches],
   };
@@ -329,7 +353,7 @@ export function annotationToStep(annotation: Annotation, file: string): TourFile
     line: toOneBased(annotation.location.line),
     anchorText: annotation.anchorText,
     title: annotation.title,
-    comment: annotation.comment,
+    content: annotation.content,
     highlights: highlightsToFile(annotation.highlights),
     watches: [...annotation.watches],
   };

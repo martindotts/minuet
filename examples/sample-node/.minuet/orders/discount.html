@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Coupon discount</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <p>
+    <code>applyDiscount</code> looks the coupon up in the <code>DISCOUNTS</code> table. An unknown (or missing)
+    coupon gives a rate of <code>0</code>, and the discount is rounded to whole units.
+  </p>
+
+  <svg class="flow" viewBox="0 0 420 70" role="img" aria-label="subtotal 120 times rate 0.1 gives a discount of 12">
+    <rect x="1" y="10" width="110" height="50" rx="6" />
+    <text x="56" y="31">subtotal</text>
+    <text x="56" y="50" class="value">120</text>
+    <text x="137" y="40" class="op">× rate</text>
+    <rect x="160" y="10" width="110" height="50" rx="6" class="highlight" />
+    <text x="215" y="31">WELCOME</text>
+    <text x="215" y="50" class="value">0.1</text>
+    <text x="296" y="40" class="op">=</text>
+    <rect x="309" y="10" width="110" height="50" rx="6" />
+    <text x="364" y="31">discount</text>
+    <text x="364" y="50" class="value">12</text>
+  </svg>
+
+  <table>
+    <thead><tr><th>Coupon</th><th>Rate</th><th>Discount on 120</th></tr></thead>
+    <tbody>
+      <tr class="current"><td><code>WELCOME</code></td><td>0.1</td><td>12</td></tr>
+      <tr><td><code>VIP</code></td><td>0.25</td><td>30</td></tr>
+      <tr><td>none or unknown</td><td>0</td><td>0</td></tr>
+    </tbody>
+  </table>
+
+  <details>
+    <summary>Why round?</summary>
+    <p>Discounts are shown as whole amounts, so <code>Math.round</code> drops the cents before the total is computed.</p>
+  </details>
+</body>
+</html>

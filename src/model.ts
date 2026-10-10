@@ -5,6 +5,27 @@ export interface Highlight {
   note?: string;
 }
 
+/**
+ * What a step (or the tour context) explains: inline markdown, or a `.md` / `.html` file whose path is
+ * relative to the folder of the tour file.
+ */
+export type Content = string | { file: string };
+
+export const CONTENT_FILE_EXTENSIONS = ['.md', '.markdown', '.html', '.htm'];
+
+export function isFileContent(content: Content): content is { file: string } {
+  return typeof content === 'object' && content !== null;
+}
+
+export function isHtmlFile(file: string): boolean {
+  return /\.html?$/i.test(file);
+}
+
+/** The inline markdown, or '' when the content is a file. */
+export function contentText(content: Content): string {
+  return isFileContent(content) ? '' : content;
+}
+
 /** One annotation per breakpoint. Lines are 0-based. */
 export interface Annotation {
   id: string;
@@ -19,8 +40,7 @@ export interface Annotation {
   anchorText: string;
   order: number;
   title: string;
-  /** Markdown. */
-  comment: string;
+  content: Content;
   highlights: Highlight[];
   watches: string[];
 }
@@ -28,8 +48,7 @@ export interface Annotation {
 /** Tour-level data that is not attached to a single breakpoint. */
 export interface TourMeta {
   title: string;
-  /** Markdown. */
-  context: string;
+  context: Content;
 }
 
 export const EMPTY_META: TourMeta = { title: '', context: '' };

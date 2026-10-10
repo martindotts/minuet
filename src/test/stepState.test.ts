@@ -9,7 +9,7 @@ function step(id: string, order: number, watches: string[] = []): Annotation {
     anchorText: '',
     order,
     title: `Step ${id}`,
-    comment: `comment ${id}`,
+    content: `content ${id}`,
     highlights: [],
     watches,
   };
@@ -29,7 +29,7 @@ function input(overrides: Partial<StepStateInput> = {}): StepStateInput {
     inSession: false,
     isStale: () => false,
     location: (a) => `a.js:${a.location.line + 1}`,
-    commentHtml: '<p>html</p>',
+    content: { html: '<p>html</p>', page: false },
     ...overrides,
   };
 }
@@ -88,12 +88,21 @@ suite('step view state', () => {
     assert.deepStrictEqual(state.results, watches);
   });
 
-  test('stale flag and raw comment are passed through', () => {
+  test('stale flag and raw content are passed through', () => {
     const state = buildStepState(input({ selectedId: 'a', isStale: (id) => id === 'a' }));
     assert.strictEqual(state.step?.stale, true);
-    assert.strictEqual(state.step?.comment, 'comment a');
-    assert.strictEqual(state.step?.commentHtml, '<p>html</p>');
+    assert.strictEqual(state.step?.contentText, 'content a');
+    assert.strictEqual(state.step?.contentHtml, '<p>html</p>');
+    assert.strictEqual(state.step?.contentPage, false);
     assert.deepStrictEqual(state.step?.watches, ['x', 'y']);
+  });
+
+  test('content from a file is not editable inline', () => {
+    const annotations = input().annotations.map((a) => (a.id === 'a' ? { ...a, content: { file: 'page.html' } } : a));
+    const state = buildStepState(input({ annotations, selectedId: 'a', content: { html: '', file: 'page.html', page: true } }));
+    assert.strictEqual(state.step?.contentText, undefined);
+    assert.strictEqual(state.step?.contentFile, 'page.html');
+    assert.strictEqual(state.step?.contentPage, true);
   });
 
   test('highlights are shown 1-based', () => {

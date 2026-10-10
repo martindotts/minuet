@@ -9,7 +9,7 @@
       "line": 27,
       "anchorText": "lines, subtotal = calculate_subtotal(order[\"items\"])",
       "title": "Entry: the order arrives",
-      "comment": "`build_order_notification` receives the whole order. Look at `coupon_code`: it decides whether \"you saved\" shows up later.",
+      "content": "`build_order_notification` receives the whole order. Look at `coupon_code`: it decides whether \"you saved\" shows up later.",
       "highlights": [{ "startLine": 26, "endLine": 34, "note": "the whole notification is built here" }],
       "watches": ["order", "order['coupon_code']", "len(order['items'])"]
     },
@@ -19,7 +19,7 @@
       "line": 13,
       "anchorText": "return lines, subtotal",
       "title": "Subtotal per line",
-      "comment": "Each item becomes a line with `total = unit_price × quantity`. The subtotal does **not** include the discount yet.",
+      "content": "Each item becomes a line with `total = unit_price × quantity`. The subtotal does **not** include the discount yet.",
       "highlights": [{ "startLine": 8, "endLine": 11, "note": "price × quantity per item" }],
       "watches": ["lines", "subtotal"]
     },
@@ -29,7 +29,7 @@
       "line": 18,
       "anchorText": "discount = round(subtotal * rate)",
       "title": "Coupon discount",
-      "comment": "The rate comes from the `DISCOUNTS` table. An unknown (or missing) coupon gives a rate of `0`.",
+      "content": "The rate comes from the `DISCOUNTS` table. An unknown (or missing) coupon gives a rate of `0`.",
       "highlights": [{ "startLine": 1, "endLine": 4, "note": "coupon table" }],
       "watches": ["coupon_code", "rate", "subtotal * rate"]
     },
@@ -39,7 +39,7 @@
       "line": 30,
       "anchorText": "discount_text = f\" (you saved {format_amount(discount)})\" if discount > 0 else \"\"",
       "title": "Amount formatted",
-      "comment": "The total after the discount, as text.",
+      "content": "The total after the discount, as text.",
       "watches": ["amount_text"]
     },
     {
@@ -48,7 +48,7 @@
       "line": 31,
       "anchorText": "return {",
       "title": "The text is assembled",
-      "comment": "The final `body` joins the customer name, the number of lines, the amount and the discount text.",
+      "content": "The final `body` joins the customer name, the number of lines, the amount and the discount text.",
       "highlights": [{ "startLine": 31, "endLine": 34 }],
       "watches": ["order['customer']['name']", "discount_text"]
     }

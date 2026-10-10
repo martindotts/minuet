@@ -31,12 +31,20 @@ function folder(): vscode.WorkspaceFolder {
 }
 
 function sampleTourUri(): vscode.Uri {
-  return vscode.Uri.joinPath(folder().uri, '.minuet', 'orders.tour.json');
+  return vscode.Uri.joinPath(folder().uri, '.minuet', 'orders', 'tour.json');
 }
 
-/** Tours are written on every change, so the tests work on a copy of the sample tour. */
+/** Tours are written on every change, so the tests work on a copy of the sample tour's folder. */
+function testTourDir(): vscode.Uri {
+  return vscode.Uri.joinPath(folder().uri, '.minuet', 'test-run');
+}
+
 function testTourUri(): vscode.Uri {
-  return vscode.Uri.joinPath(folder().uri, '.minuet', 'test-run.tour.json');
+  return vscode.Uri.joinPath(testTourDir(), 'tour.json');
+}
+
+async function copySample(): Promise<void> {
+  await vscode.workspace.fs.copy(vscode.Uri.joinPath(sampleTourUri(), '..'), testTourDir(), { overwrite: true });
 }
 
 async function readTour(uri = testTourUri()): Promise<{ title: string; steps: { line: number }[] }> {
@@ -48,7 +56,7 @@ async function startClean(api: MinuetApi): Promise<void> {
   await api.tours.close();
   vscode.debug.removeBreakpoints(vscode.debug.breakpoints);
   await waitFor(() => vscode.debug.breakpoints.length === 0, 'breakpoints cleared');
-  await vscode.workspace.fs.delete(testTourUri()).then(undefined, () => undefined);
+  await vscode.workspace.fs.delete(testTourDir(), { recursive: true }).then(undefined, () => undefined);
 }
 
 function ordersUri(): vscode.Uri {
@@ -78,7 +86,7 @@ suite('minuet (integration)', function () {
     assert.ok(extension, 'extension is installed');
     api = await extension.activate();
     await startClean(api);
-    await vscode.workspace.fs.copy(sampleTourUri(), testTourUri());
+    await copySample();
   });
 
   suiteTeardown(async () => {
@@ -105,7 +113,7 @@ suite('minuet (integration)', function () {
     assert.ok(steps.every((a) => a.breakpointId), 'every annotation is associated with a breakpoint');
     assert.deepStrictEqual(breakpointLines(), [13, 19, 28, 31, 33]);
     assert.match(api.store.getMeta().title, /notification/);
-    assert.match(api.store.getMeta().context, /Starting point/);
+    assert.deepStrictEqual(api.store.getMeta().context, { file: 'context.md' });
     assert.ok(steps.every((a) => !api.staleTracker.isStale(a.id)), 'no step is stale right after opening');
   });
 
@@ -137,8 +145,16 @@ suite('minuet (integration)', function () {
       'Current Step draws step 3 without a debug session',
     );
     assert.deepStrictEqual(api.stepView.errors, []);
-    assert.match(state.step?.commentHtml ?? '', /<code>DISCOUNTS<\/code>/, 'markdown is rendered');
+    assert.strictEqual(state.step?.contentPage, true, 'step 3 is explained in an HTML page');
+    assert.strictEqual(state.step?.contentFile, 'discount.html');
     assert.strictEqual(api.decorations.paintedId, step(3).id, 'without a session the selected step is highlighted');
+
+    await vscode.commands.executeCommand('minuet.focusStep', step(2).id);
+    const second = await waitFor(
+      () => (api.stepView.state?.step?.id === step(2).id ? api.stepView.state : undefined),
+      'Current Step shows step 2',
+    );
+    assert.match(second.step?.contentHtml ?? '', /<code>total = unitPrice × quantity<\/code>/, 'markdown is rendered');
   });
 
   test('moving the cursor onto an annotated line selects its step', async () => {
@@ -354,7 +370,7 @@ suite('minuet (tour files)', function () {
     assert.ok(extension, 'extension is installed');
     api = await extension.activate();
     await startClean(api);
-    await vscode.workspace.fs.copy(sampleTourUri(), testTourUri());
+    await copySample();
   });
 
   suiteTeardown(() => startClean(api));
@@ -384,6 +400,39 @@ suite('minuet (tour files)', function () {
     await waitFor(() => breakpointLines().join() === '13,19,28,31', 'the removed step loses its breakpoint');
   });
 
+  test('an HTML page is drawn in Current Step and in its tab, without scripts or network', async () => {
+    const third = api.store.all().find((a) => a.order === 3);
+    assert.ok(third);
+    await vscode.commands.executeCommand('minuet.focusStep', third.id);
+    const state = await waitFor(
+      () => (api.stepView.state?.step?.id === third.id && api.stepView.state.step.contentBase ? api.stepView.state : undefined),
+      'Current Step gets the page and its folder',
+    );
+    assert.strictEqual(state.step?.contentPage, true);
+    assert.match(state.step?.contentHtml ?? '', /<table>/, 'the page is sent as written');
+    assert.match(state.step?.contentBase ?? '', /\/test-run\/$/, 'relative files resolve next to the page');
+    await waitFor(() => api.stepView.rendered?.stepId === third.id, 'Current Step draws the page');
+    assert.deepStrictEqual(api.stepView.errors, []);
+
+    await api.page.showStep(third.id, { preserveFocus: true });
+    const html = await waitFor(() => api.page.document?.includes('<table>') && api.page.document, 'the tab shows the page');
+    assert.match(html, /<base href="[^"]+\/test-run\/">/, 'relative files resolve next to the page');
+    assert.match(html, /script-src 'none'/, 'no scripts');
+    assert.doesNotMatch(html, /connect-src/, 'no requests');
+    const images = /img-src ([^;"]+)/.exec(html)?.[1].trim().split(/\s+/) ?? [];
+    for (const source of images) {
+      assert.ok(source === "'self'" || source === 'data:' || /vscode-(cdn|resource)/.test(source), `no images from the network (${source})`);
+    }
+  });
+
+  test('a markdown file is rendered, and edits to it show up', async () => {
+    await api.page.showContext();
+    await waitFor(() => api.page.document?.includes('Starting point'), 'context.md is rendered');
+    const contextFile = vscode.Uri.joinPath(testTourDir(), 'context.md');
+    await vscode.workspace.fs.writeFile(contextFile, new TextEncoder().encode('## Changed by hand\n'));
+    await waitFor(() => api.page.document?.includes('Changed by hand'), 'the page reloads when its file changes');
+  });
+
   test('closing a tour removes its steps and breakpoints, not its file', async () => {
     await vscode.commands.executeCommand('minuet.closeTour');
     assert.strictEqual(api.store.count(), 0);
@@ -404,7 +453,7 @@ suite('minuet (tour files)', function () {
   test('deleting the file of the open tour closes it', async () => {
     await vscode.commands.executeCommand('minuet.openTour', testTourUri());
     assert.strictEqual(api.store.count(), 4);
-    await vscode.workspace.fs.delete(testTourUri());
+    await vscode.workspace.fs.delete(testTourDir(), { recursive: true });
     await waitFor(() => api.tours.activeFile === undefined && api.store.count() === 0, 'the tour is closed');
     await waitFor(() => breakpointLines().length === 0, 'its breakpoints are removed');
   });

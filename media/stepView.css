@@ -374,3 +374,14 @@ button.link:hover {
 .add-watch {
   margin-top: 8px;
 }
+
+/* An HTML page of a step: isolated in a shadow root; `contain` keeps it (fixed elements included) inside its box. */
+.page {
+  contain: layout paint;
+  overflow: auto;
+  margin: 4px 0 8px;
+}
+
+.source {
+  font-size: 0.9em;
+}

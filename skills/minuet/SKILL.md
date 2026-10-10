@@ -6,8 +6,9 @@ description: Explain how a code flow works with a step-by-step tour in the VS Co
 # Tours with minuet
 
 minuet is a VS Code extension that adds annotations to the breakpoints of the VS Code debugger, in any language
-it can debug (JavaScript/TypeScript, Python, Go, Java, C#…). Each step of a tour is a breakpoint with a title, a markdown comment, highlighted ranges and
-expressions that are evaluated with the real values when execution stops there.
+it can debug (JavaScript/TypeScript, Python, Go, Java, C#…). Each step of a tour is a breakpoint with a title,
+an explanation (markdown, or a markdown or HTML file), highlighted ranges and expressions that are evaluated with
+the real values when execution stops there.
 
 Your job: understand the flow, find a **run** that goes through it (an existing test or, if there is none, a
 temporary one), write the **tour** as a JSON file in the repository's `.minuet/` folder, **open** it in VS Code
@@ -56,10 +57,16 @@ that the run will be **paused at breakpoints inside VS Code's debugger**, which 
 
 ## 3. Tour (JSON)
 
-Tours are files in the **`.minuet/` folder at the repository root** (the folder open in VS Code):
-`.minuet/<name>.tour.json`, with a lowercase name made of words and hyphens taken from the title
-(`.minuet/order-confirmation-email.tour.json`). Create the folder if it does not exist. If the repository sets
-another folder in `minuet.toursFolder` (`.vscode/settings.json`), use that one.
+Each tour is a folder in the **`.minuet/` folder at the repository root** (the folder open in VS Code), with the
+tour in `tour.json` and the files of its steps next to it:
+
+```
+.minuet/order-confirmation-email/tour.json
+.minuet/order-confirmation-email/step-3.html
+```
+
+The folder name is lowercase words and hyphens taken from the title. Create the folders if they do not exist. If
+the repository sets another folder in `minuet.toursFolder` (`.vscode/settings.json`), use that one.
 
 Never overwrite a tour that is already there: they can be the user's or the team's. Pick a new name.
 
@@ -75,7 +82,7 @@ Never overwrite a tour that is already there: they can be the user's or the team
       "line": 42,
       "anchorText": "const { orderId, customer } = event.body;",
       "title": "The order event arrives",
-      "comment": "markdown...",
+      "content": "markdown...",
       "highlights": [{ "startLine": 48, "endLine": 61, "note": "data taken from the body" }],
       "watches": ["event.body.orderId", "customer.email"]
     }
@@ -86,17 +93,30 @@ Never overwrite a tour that is already there: they can be the user's or the team
 | Field | Required | Rule |
 | --- | --- | --- |
 | `version` | yes | Always `1`. |
-| `title`, `context` | no | Text and markdown. `context` is shown first: explain the starting point. |
+| `title` | no | Text. |
+| `context` | no | Like `content`. Shown first: explain the starting point. |
 | `steps[].order` | yes | Integer ≥ 1, no repeats. **Execution order**, not reading order. |
 | `steps[].file` | yes | Path **relative to the folder open in VS Code** (the repository root), with `/`. |
 | `steps[].line` | yes | Line of the breakpoint, **starting at 1**. One step per line. |
 | `steps[].anchorText` | recommended | Exact text of that line, without leading or trailing spaces. |
 | `steps[].title` | yes | Short title. |
-| `steps[].comment` | no | Short markdown: what happens here and what to look at in the values. |
+| `steps[].content` | no | Short markdown: what happens here and what to look at in the values. Or `{ "file": "step-3.html" }`: a `.md` or `.html` file, relative to the tour's folder. |
 | `steps[].highlights` | no | Ranges in the **same file**, `startLine`/`endLine` starting at 1 and inclusive; optional short `note`. |
 | `steps[].watches` | no | Expressions in the program's language, evaluated at that point. |
 
-`//` comments are allowed in the JSON.
+`//` comments are allowed in the JSON, but VS Code does not keep them when it rewrites the file.
+
+### Markdown or a page
+
+Use inline markdown for almost every step: a few sentences, `code`, a short list. Use an **HTML page** only when a
+picture explains it better than text: a small diagram of the data flow, a table of cases, a before/after. It is
+shown inside the step, in a narrow panel. Keep it simple and self-contained:
+
+- **static HTML and CSS only: scripts never run.** For diagrams write SVG inline; for things to expand use
+  `<details>`; write tables and data directly in the HTML,
+- put it next to `tour.json`, with any css or images it needs; refer to them with relative paths,
+- nothing from the network (no CDNs, no remote fonts or images): only the tour's own files are loaded,
+- skip the title: the step's title is already shown above the page.
 
 ### Rules that get broken the most
 
@@ -122,7 +142,7 @@ sed -n '42p' packages/orders/src/confirmationEmail.ts
 And that the JSON parses:
 
 ```bash
-node -e "JSON.parse(require('fs').readFileSync('.minuet/x.tour.json','utf8'))"
+node -e "JSON.parse(require('fs').readFileSync('.minuet/x/tour.json','utf8'))"
 ```
 
 (If you used `//` comments, this check fails; in that case leave the comments out.)
@@ -133,19 +153,19 @@ Open the extension's URI with the **absolute**, URL-encoded path of the tour fil
 
 ```bash
 # macOS
-open "vscode://martindotts.minuet/open?file=%2Fpath%2Fto%2Frepo%2F.minuet%2Fx.tour.json"
+open "vscode://martindotts.minuet/open?file=%2Fpath%2Fto%2Frepo%2F.minuet%2Fx%2Ftour.json"
 # Linux
-xdg-open "vscode://martindotts.minuet/open?file=%2Fpath%2Fto%2Frepo%2F.minuet%2Fx.tour.json"
+xdg-open "vscode://martindotts.minuet/open?file=%2Fpath%2Fto%2Frepo%2F.minuet%2Fx%2Ftour.json"
 # Windows (PowerShell)
-Start-Process "vscode://martindotts.minuet/open?file=C%3A%5Cpath%5Cto%5Crepo%5C.minuet%5Cx.tour.json"
+Start-Process "vscode://martindotts.minuet/open?file=C%3A%5Cpath%5Cto%5Crepo%5C.minuet%5Cx%5Ctour.json"
 ```
 
 VS Code asks the user to confirm, then sets a breakpoint for each step. If several VS Code windows are open,
 the URI goes to the one that last had focus: ask the user to bring the repository's window to the front.
 
 If the user sees an error, the message says which field failed (`steps[2].line: …`); fix the file and open the
-URI again. Once the tour is open, VS Code follows its file: if you edit it again (to fix or add a step), the
-open tour reloads by itself, with no need to open the URI again.
+URI again. Once the tour is open, VS Code follows its folder: if you edit `tour.json` or a step's file again (to
+fix or add a step), the tour and the step reload by themselves, with no need to open the URI again.
 
 ## 5. Tell the user how to run it
 
@@ -159,7 +179,7 @@ A short message with:
   Debug),
 - that if the steps run in a different order, the extension offers **Order by Execution**.
 
-Do not repeat the comment of each step in the chat: it is already in the tour. A one or two line summary of the
+Do not repeat the content of each step in the chat: it is already in the tour. A one or two line summary of the
 flow is fine.
 
 ## 6. Clean up
@@ -167,6 +187,6 @@ flow is fine.
 When the user is done (or asks for it):
 
 - delete the temporary test, if you created one. Existing tests are not touched,
-- ask whether to keep the tour. It is a file in `.minuet/`: committed, it lets the team walk the same flow; if
-  they do not want it, delete the file (VS Code closes the tour and removes its breakpoints),
-- **minuet: Close Tour** takes the tour out of VS Code (with its breakpoints) and keeps the file.
+- ask whether to keep the tour. It is a folder in `.minuet/`: committed, it lets the team walk the same flow; if
+  they do not want it, delete the folder (VS Code closes the tour and removes its breakpoints),
+- **minuet: Close Tour** takes the tour out of VS Code (with its breakpoints) and keeps its files.

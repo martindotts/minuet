@@ -51,7 +51,7 @@ suite('agents: skill', () => {
     const uri = /vscode:\/\/martindotts\.minuet\/open\?file=([^"\s]+)/.exec(text);
     assert.ok(uri, 'open URI in the skill');
     const request = parseUriRequest('/open', `file=${decodeURIComponent(uri[1])}`);
-    assert.ok('file' in request && request.file.endsWith('.minuet/x.tour.json'), JSON.stringify(request));
+    assert.ok('file' in request && request.file.endsWith('.minuet/x/tour.json'), JSON.stringify(request));
   });
 
   test('is installed in each agent skills folder under the minuet name', () => {

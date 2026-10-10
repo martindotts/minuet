@@ -53,6 +53,11 @@
     "onStartupFinished",
     "onUri"
   ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true
+    }
+  },
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
@@ -251,7 +256,7 @@
         {
           "command": "minuet.openTour",
           "group": "minuet@1",
-          "when": "resourceFilename =~ /\\.tour\\.jsonc?$/"
+          "when": "resourceFilename =~ /(^tour|\\.tour)\\.jsonc?$/"
         }
       ],
       "view/title": [

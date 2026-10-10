@@ -11,6 +11,23 @@ import { VIEW_ID } from './tourView';
 
 export const TOURS_VIEW_ID = 'minuet.tours';
 const ACTIVE_KEY = 'minuet.activeTour';
+/** File name of a tour stored as a folder: `.minuet/<name>/tour.json`, next to its content files. */
+export const TOUR_FILE_NAME = 'tour.json';
+
+/** `<folder>/tour.json(c)`: a tour stored as a folder with its content files. */
+export function isFolderTour(fsPath: string): boolean {
+  return /^tour\.jsonc?$/i.test(path.basename(fsPath));
+}
+
+/** A tour file name: `tour.json` inside its folder, or `<name>.tour.json` on its own. */
+export function isTourFileName(name: string): boolean {
+  return /^tour\.jsonc?$/i.test(name) || /\.tour\.jsonc?$/i.test(name);
+}
+
+/** True when the tour file belongs to the tours folder (directly, or as `<name>/tour.json`). */
+export function isInToursFolder(fsPath: string, folder: string): boolean {
+  return isFolderTour(fsPath) ? isDirectlyIn(path.dirname(fsPath), folder) : isDirectlyIn(fsPath, folder);
+}
 
 /** A tour file in the tours folder. */
 export interface TourEntry {
@@ -102,6 +119,9 @@ async function showErrors(title: string, errors: string[]): Promise<void> {
 export class Tours implements vscode.Disposable {
   private readonly changeEmitter = new vscode.EventEmitter<void>();
   readonly onDidChange = this.changeEmitter.event;
+  private readonly contentEmitter = new vscode.EventEmitter<vscode.Uri>();
+  /** A file of the tours folder that is not a tour changed (a step's .md or .html, its css, data…). */
+  readonly onDidChangeContent = this.contentEmitter.event;
 
   private entries: TourEntry[] = [];
   private active: vscode.Uri | undefined;
@@ -149,6 +169,22 @@ export class Tours implements vscode.Disposable {
 
   isOpen(uri: vscode.Uri): boolean {
     return this.active !== undefined && sameFile(this.active, uri);
+  }
+
+  /**
+   * The file of a `content` (or `context`) of the open tour: relative to the tour file's folder, and never
+   * outside the workspace or the tours folder.
+   */
+  resolveContentFile(file: string): { uri: vscode.Uri } | { error: string } {
+    if (!this.active) {
+      return { error: 'No tour is open.' };
+    }
+    const fsPath = path.resolve(path.dirname(this.active.fsPath), file);
+    const roots = [...workspaceFolders().map((f) => f.fsPath), ...(this.folder ? [this.folder.fsPath] : [])];
+    if (!roots.some((root) => isInside(root, fsPath))) {
+      return { error: `"${file}" is outside the workspace.` };
+    }
+    return { uri: vscode.Uri.file(fsPath) };
   }
 
   /** Resolves once the pending writes of the open tour are on disk. */
@@ -205,15 +241,22 @@ export class Tours implements vscode.Disposable {
       return false;
     }
 
-    const inFolder = isDirectlyIn(source.fsPath, folder.fsPath);
-    const target = inFolder ? source : await this.freeName(folder, path.basename(source.fsPath));
+    const inFolder = isInToursFolder(source.fsPath, folder.fsPath);
+    const asFolder = isFolderTour(source.fsPath);
+    const target = inFolder
+      ? source
+      : asFolder
+        ? vscode.Uri.joinPath(await this.freeName(folder, path.basename(path.dirname(source.fsPath)), ''), TOUR_FILE_NAME)
+        : await this.freeName(folder, path.basename(source.fsPath));
     const where = vscode.workspace.asRelativePath(target);
     if (options.external || !inFolder) {
       const accept = inFolder ? 'Open' : 'Copy and Open';
       const detail = [
         options.external ? 'Requested by an agent or a link (vscode://).' : '',
         `Tour: "${loaded.tour.title || 'untitled'}", ${loaded.tour.steps.length} steps.`,
-        inFolder ? `File: ${where}` : `Tours live in ${vscode.workspace.asRelativePath(folder)}/. It is copied to ${where}.`,
+        inFolder
+          ? `File: ${where}`
+          : `Tours live in ${vscode.workspace.asRelativePath(folder)}/. It is copied to ${where}${asFolder ? ', with its folder' : ''}.`,
         'A breakpoint is set for each step.',
       ].filter(Boolean);
       const choice = await vscode.window.showInformationMessage(
@@ -231,7 +274,12 @@ export class Tours implements vscode.Disposable {
     }
     if (!inFolder) {
       await this.ensureFolder(folder);
-      await vscode.workspace.fs.writeFile(target, new TextEncoder().encode(text));
+      if (asFolder) {
+        // The content files of the steps live next to tour.json: copy the whole folder.
+        await vscode.workspace.fs.copy(vscode.Uri.joinPath(source, '..'), vscode.Uri.joinPath(target, '..'));
+      } else {
+        await vscode.workspace.fs.writeFile(target, new TextEncoder().encode(text));
+      }
     }
     await this.load(target, text, loaded, { setBreakpoints: true });
     await this.staleTracker.refresh();
@@ -275,26 +323,30 @@ export class Tours implements vscode.Disposable {
     }
     const title = await vscode.window.showInputBox({
       title: 'New Tour',
-      prompt: `Title of the tour. It is saved in ${vscode.workspace.asRelativePath(folder)}/.`,
+      prompt: `Title of the tour. It is saved in its own folder in ${vscode.workspace.asRelativePath(folder)}/.`,
       placeHolder: 'e.g. How the order confirmation email is built',
       validateInput: (v) => (v.trim() ? undefined : 'The title cannot be empty.'),
     });
     if (!title) {
       return false;
     }
-    const target = await this.freeName(folder, `${tourFileName(title)}.tour.json`);
+    const target = vscode.Uri.joinPath(await this.freeName(folder, tourFileName(title), ''), TOUR_FILE_NAME);
     const text = serializeTour({ version: 1, title: title.trim(), context: '', steps: [] });
     await this.ensureFolder(folder);
     await vscode.workspace.fs.writeFile(target, new TextEncoder().encode(text));
     return this.open(target);
   }
 
-  /** Deletes a tour file, closing it first if it is open. */
+  /** Deletes a tour (its folder, for a `<name>/tour.json` tour), closing it first if it is open. */
   async delete(uri: vscode.Uri): Promise<void> {
     const remove = 'Delete';
+    const target = isFolderTour(uri.fsPath) ? vscode.Uri.joinPath(uri, '..') : uri;
     const choice = await vscode.window.showWarningMessage(
-      `Delete the tour ${vscode.workspace.asRelativePath(uri)}?`,
-      { modal: true, detail: 'The file is deleted. If it is in git, it can be recovered from there.' },
+      `Delete the tour ${vscode.workspace.asRelativePath(target)}${target === uri ? '' : '/'}?`,
+      {
+        modal: true,
+        detail: `${target === uri ? 'The file is' : 'The folder and all its files are'} moved to the trash. If it is in git, it can be recovered from there.`,
+      },
       remove,
     );
     if (choice !== remove) {
@@ -303,7 +355,7 @@ export class Tours implements vscode.Disposable {
     if (this.isOpen(uri)) {
       await this.close();
     }
-    await vscode.workspace.fs.delete(uri, { useTrash: true });
+    await vscode.workspace.fs.delete(target, { recursive: true, useTrash: true });
   }
 
   /** Makes sure a tour is open: the open one, or one the user picks or creates. False when the user cancels. */
@@ -335,8 +387,16 @@ export class Tours implements vscode.Disposable {
         files = [];
       }
       for (const [name, type] of files) {
-        if (type === vscode.FileType.File && /\.jsonc?$/i.test(name)) {
+        if (type === vscode.FileType.File && isTourFileName(name)) {
           entries.push(await readEntry(vscode.Uri.joinPath(folder, name)));
+        } else if (type === vscode.FileType.Directory) {
+          for (const candidate of [TOUR_FILE_NAME, 'tour.jsonc']) {
+            const uri = vscode.Uri.joinPath(folder, name, candidate);
+            if (await exists(uri)) {
+              entries.push(await readEntry(uri));
+              break;
+            }
+          }
         }
       }
     }
@@ -457,11 +517,11 @@ export class Tours implements vscode.Disposable {
     this.changeEmitter.fire();
   }
 
-  /** `name`, or `name-2`, `name-3`… when taken. */
-  private async freeName(folder: vscode.Uri, name: string): Promise<vscode.Uri> {
-    const match = /^(.*?)((\.tour)?\.jsonc?)$/i.exec(name);
+  /** `name`, or `name-2`, `name-3`… when taken. `ext` is '' for a folder. */
+  private async freeName(folder: vscode.Uri, name: string, ext?: string): Promise<vscode.Uri> {
+    const match = ext === undefined ? /^(.*?)((\.tour)?\.jsonc?)$/i.exec(name) : null;
     const base = match ? match[1] : name;
-    const ext = match ? match[2] : '.tour.json';
+    ext = ext ?? (match ? match[2] : '.tour.json');
     for (let n = 1; ; n++) {
       const uri = vscode.Uri.joinPath(folder, n === 1 ? `${base}${ext}` : `${base}-${n}${ext}`);
       if (!(await exists(uri))) {
@@ -517,18 +577,30 @@ export class Tours implements vscode.Disposable {
     this.watcher = undefined;
     const folder = this.folder;
     if (folder) {
-      this.watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(folder, '*.{json,jsonc}'));
-      this.watcher.onDidCreate(() => void this.refresh());
-      this.watcher.onDidChange((uri) => {
+      // The whole tree: tour files, tour folders and the content files of their steps.
+      this.watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(folder, '**/*'));
+      this.watcher.onDidCreate((uri) => {
         void this.refresh();
-        void this.reload(uri);
+        this.contentEmitter.fire(uri);
+      });
+      this.watcher.onDidChange((uri) => {
+        if (isTourFileName(path.basename(uri.fsPath))) {
+          void this.refresh();
+          void this.reload(uri);
+        } else {
+          this.contentEmitter.fire(uri);
+        }
       });
       this.watcher.onDidDelete((uri) => {
         void this.refresh();
-        if (this.isOpen(uri)) {
+        const active = this.active;
+        // Deleting a tour folder reports the folder, not the tour.json inside it.
+        if (active && (this.isOpen(uri) || isInside(uri.fsPath, active.fsPath))) {
           void this.close().then(() =>
             vscode.window.showInformationMessage(`The open tour was closed: ${vscode.workspace.asRelativePath(uri)} was deleted.`),
           );
+        } else {
+          this.contentEmitter.fire(uri);
         }
       });
     }
@@ -538,6 +610,7 @@ export class Tours implements vscode.Disposable {
   dispose(): void {
     this.watcher?.dispose();
     this.changeEmitter.dispose();
+    this.contentEmitter.dispose();
     this.disposables.forEach((d) => d.dispose());
   }
 }
@@ -548,7 +621,7 @@ function isInside(folder: string, file: string): boolean {
 }
 
 async function readEntry(uri: vscode.Uri): Promise<TourEntry> {
-  const name = path.basename(uri.fsPath).replace(/(\.tour)?\.jsonc?$/i, '');
+  const name = isFolderTour(uri.fsPath) ? path.basename(path.dirname(uri.fsPath)) : path.basename(uri.fsPath).replace(/(\.tour)?\.jsonc?$/i, '');
   try {
     const parsed = parseTourJson(decode(await vscode.workspace.fs.readFile(uri)));
     if (!parsed.ok) {
@@ -584,7 +657,9 @@ export class ToursView implements vscode.TreeDataProvider<TourEntry>, vscode.Dis
 
   getTreeItem(tour: TourEntry): vscode.TreeItem {
     const open = this.tours.isOpen(tour.uri);
-    const file = path.basename(tour.uri.fsPath);
+    const file = isFolderTour(tour.uri.fsPath)
+      ? `${path.basename(path.dirname(tour.uri.fsPath))}/${path.basename(tour.uri.fsPath)}`
+      : path.basename(tour.uri.fsPath);
     const item = new vscode.TreeItem(tour.title, vscode.TreeItemCollapsibleState.None);
     item.id = tour.uri.toString();
     item.resourceUri = tour.uri;

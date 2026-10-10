@@ -29,7 +29,7 @@ function folder(): vscode.WorkspaceFolder {
   return f;
 }
 
-const sampleTour = (): vscode.Uri => vscode.Uri.joinPath(folder().uri, '.minuet', 'orders.tour.json');
+const sampleTour = (): vscode.Uri => vscode.Uri.joinPath(folder().uri, '.minuet', 'orders', 'tour.json');
 const testTour = (): vscode.Uri => vscode.Uri.joinPath(folder().uri, '.minuet', 'test-run.tour.json');
 
 /** The interpreter for debugpy: MINUET_PYTHON, or python3 from the PATH. */

@@ -9,7 +9,7 @@ function step(id: string, order: number): Annotation {
     anchorText: '',
     order,
     title: id,
-    comment: '',
+    content: '',
     highlights: [],
     watches: [],
   };

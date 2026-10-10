@@ -1,6 +1,15 @@
 import { highlightsToFile } from './tourFormat';
-import { Annotation, sortByOrder } from './model';
+import { Annotation, isFileContent, sortByOrder } from './model';
 import { StepInfo, StepViewState, WatchView } from './webview/protocol';
+
+/** How the shown step's content is presented. */
+export interface ContentView {
+  html: string;
+  base?: string;
+  file?: string;
+  page: boolean;
+  error?: string;
+}
 
 export interface StopInfo {
   annotationId: string;
@@ -17,7 +26,7 @@ export interface StepStateInput {
   inSession: boolean;
   isStale: (id: string) => boolean;
   location: (annotation: Annotation) => string;
-  commentHtml: string;
+  content: ContentView;
 }
 
 /**
@@ -49,8 +58,12 @@ export function buildStepState(input: StepStateInput): StepViewState {
     order: annotation.order,
     total: sorted.length,
     title: annotation.title,
-    comment: annotation.comment,
-    commentHtml: input.commentHtml,
+    contentText: isFileContent(annotation.content) ? undefined : annotation.content,
+    contentHtml: input.content.html,
+    contentBase: input.content.base,
+    contentFile: input.content.file,
+    contentPage: input.content.page,
+    contentError: input.content.error,
     location: input.location(annotation),
     stale: input.isStale(annotation.id),
     anchorText: annotation.anchorText,

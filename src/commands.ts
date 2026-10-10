@@ -3,11 +3,12 @@ import * as vscode from 'vscode';
 import { installAgentSkill } from './agentSkills';
 import { findBreakpointAt, newBreakpoint } from './breakpointSync';
 import { isInExecutionOrder, orderByExecution } from './executionOrder';
-import { Annotation, Highlight, sortByOrder } from './model';
+import { Annotation, contentText, Highlight, isFileContent, sortByOrder } from './model';
 import { toOneBased, toZeroBased } from './lines';
 import { openStep, selectionLines } from './navigation';
 import { StepSelection } from './selection';
 import { readLine, StaleTracker } from './staleTracker';
+import { StepPage } from './stepPage';
 import { STEP_VIEW_ID, StepView } from './stepView';
 import { StopController } from './stopController';
 import { AnnotationStore } from './store';
@@ -25,6 +26,7 @@ interface Services {
   selection: StepSelection;
   stepView: StepView;
   tours: Tours;
+  page: StepPage;
 }
 
 interface Target {
@@ -177,11 +179,11 @@ async function annotateLine(services: Services, arg: unknown): Promise<void> {
   if (title === undefined) {
     return;
   }
-  const comment = await vscode.window.showInputBox({
+  const content = await vscode.window.showInputBox({
     title: `Annotate line ${toOneBased(target.line)}`,
-    prompt: 'Comment in markdown (optional; it can be edited later in the Current Step view)',
+    prompt: 'Content in markdown (optional; it can be edited later in the Current Step view)',
   });
-  if (comment === undefined) {
+  if (content === undefined) {
     return;
   }
 
@@ -195,7 +197,7 @@ async function annotateLine(services: Services, arg: unknown): Promise<void> {
     anchorText: lineText.trim(),
     order: store.nextOrder(),
     title: title.trim(),
-    comment,
+    content,
     highlights: [],
     watches: [],
   };
@@ -307,8 +309,10 @@ async function editAnnotation(services: Services, arg: unknown): Promise<void> {
       },
     },
     {
-      label: '$(markdown) Comment',
-      description: 'Edited as markdown in the Current Step view',
+      label: '$(markdown) Content',
+      description: isFileContent(annotation.content)
+        ? `In ${annotation.content.file}`
+        : 'Edited as markdown in the Current Step view',
       action: () => stepView.edit(id),
     },
     {
@@ -505,8 +509,12 @@ async function suggestExecutionOrder(services: Services, hits: string[]): Promis
   }
 }
 
-async function showContext(store: AnnotationStore): Promise<void> {
+async function showContext(store: AnnotationStore, page: StepPage): Promise<void> {
   const meta = store.getMeta();
+  if (isFileContent(meta.context)) {
+    await page.showContext();
+    return;
+  }
   if (!meta.context.trim()) {
     return;
   }
@@ -525,7 +533,7 @@ export function contextContentProvider(store: AnnotationStore): vscode.TextDocum
     onDidChange: emitter.event,
     provideTextDocumentContent: () => {
       const meta = store.getMeta();
-      return `# ${meta.title || 'Tour context'}\n\n${meta.context}\n`;
+      return `# ${meta.title || 'Tour context'}\n\n${contentText(meta.context)}\n`;
     },
     dispose: () => {
       subscription.dispose();
@@ -590,7 +598,7 @@ export function registerCommands(services: Services): vscode.Disposable[] {
         await vscode.commands.executeCommand(`${STEP_VIEW_ID}.focus`);
       }
     }),
-    register('showContext', () => showContext(store)),
+    register('showContext', () => showContext(store, services.page)),
     register('installAgentSkill', () => installAgentSkill(services.extensionUri)),
   ];
 }

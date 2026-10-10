@@ -14,7 +14,7 @@ import {
   TourFile,
 } from '../tourFormat';
 
-const SAMPLE_TOUR = path.resolve(__dirname, '../../examples/sample-node/.minuet/orders.tour.json');
+const SAMPLE_TOUR = path.resolve(__dirname, '../../examples/sample-node/.minuet/orders/tour.json');
 
 function validTour(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -28,7 +28,7 @@ function validTour(overrides: Record<string, unknown> = {}): Record<string, unkn
         line: 10,
         anchorText: 'const a = 1;',
         title: 'Step one',
-        comment: '**md**',
+        content: '**md**',
         highlights: [{ startLine: 10, endLine: 12, note: 'a note' }],
         watches: ['a'],
       },
@@ -76,7 +76,7 @@ suite('tourFormat: parsing', () => {
       version: 1,
       title: '',
       context: '',
-      steps: [{ order: 1, file: 'a.ts', line: 3, title: 'T', comment: '', highlights: [], watches: [] }],
+      steps: [{ order: 1, file: 'a.ts', line: 3, title: 'T', content: '', highlights: [], watches: [] }],
     });
   });
 
@@ -110,12 +110,12 @@ suite('tourFormat: parsing', () => {
       // tour
       "version": 1, /* inline */
       "steps": [{ "order": 1, "file": "a.ts", "line": 106, // 1-based
-        "title": "url // not a comment", "comment": "/* kept */" }]
+        "title": "url // not a comment", "content": "/* kept */" }]
     }`;
     const result = parseTourJson(text);
     assert.ok(result.ok, result.ok ? '' : result.errors.join('\n'));
     assert.strictEqual(result.tour.steps[0].title, 'url // not a comment');
-    assert.strictEqual(result.tour.steps[0].comment, '/* kept */');
+    assert.strictEqual(result.tour.steps[0].content, '/* kept */');
   });
 
   test('stripJsonComments keeps line numbers', () => {
@@ -190,10 +190,10 @@ suite('tourFormat: parsing', () => {
       validTour({
         title: 3,
         context: {},
-        steps: [{ order: 1, file: 'a.ts', line: 1, title: 'T', comment: 1, anchorText: 2, highlights: {}, watches: 'x' }],
+        steps: [{ order: 1, file: 'a.ts', line: 1, title: 'T', content: 1, anchorText: 2, highlights: {}, watches: 'x' }],
       }),
     );
-    for (const field of ['title', 'context', 'steps[0].comment', 'steps[0].anchorText', 'steps[0].highlights', 'steps[0].watches']) {
+    for (const field of ['title', 'context', 'steps[0].content', 'steps[0].anchorText', 'steps[0].highlights', 'steps[0].watches']) {
       assert.ok(
         errors.some((e) => e.startsWith(field + ':')),
         `missing error for ${field}`,
@@ -214,7 +214,7 @@ suite('tourFormat: conversion', () => {
 
   test('stepToAnnotation anchors to the current line when anchorText is missing', () => {
     const a = stepToAnnotation(
-      { order: 1, file: 'a.ts', line: 1, title: 'T', comment: '', highlights: [], watches: [] },
+      { order: 1, file: 'a.ts', line: 1, title: 'T', content: '', highlights: [], watches: [] },
       'file:///a.ts',
       'id',
       '   return x;  ',
@@ -231,7 +231,7 @@ suite('tourFormat: conversion', () => {
         anchorText: 'b()',
         order: 2,
         title: 'Second',
-        comment: 'two',
+        content: 'two',
         highlights: [],
         watches: ['b.value'],
       },
@@ -241,7 +241,7 @@ suite('tourFormat: conversion', () => {
         anchorText: 'const x = 1;',
         order: 1,
         title: 'First',
-        comment: '# one\n\ntext',
+        content: { file: 'one.md' },
         highlights: [{ startLine: 153, endLine: 169, note: 'body data' }, { startLine: 3, endLine: 3 }],
         watches: ['event.body.operation'],
       },
@@ -262,5 +262,21 @@ suite('tourFormat: conversion', () => {
     const strip = (a: Annotation) => ({ ...a, id: '', breakpointId: undefined });
     const expected = [annotations[1], annotations[0]].map(strip);
     assert.deepStrictEqual(reimported.map(strip), expected);
+  });
+
+  test('content is markdown text or a .md / .html file', () => {
+    const step = (content: unknown) => validTour({ steps: [{ order: 1, file: 'a.ts', line: 1, title: 'T', content }] });
+    const ok = (content: unknown) => {
+      const result = parseObject(step(content));
+      assert.ok(result.ok, JSON.stringify(content));
+      return result.tour.steps[0].content;
+    };
+    assert.strictEqual(ok('**md**'), '**md**');
+    assert.deepStrictEqual(ok({ file: ' page.html ' }), { file: 'page.html' });
+    assert.deepStrictEqual(ok({ file: 'notes/step.md' }), { file: 'notes/step.md' });
+    for (const bad of [{ file: 'data.json' }, { file: '' }, { path: 'x.md' }, 3]) {
+      assert.ok(errorsOf(step(bad)).some((e) => e.startsWith('steps[0].content:')), JSON.stringify(bad));
+    }
+    assert.deepStrictEqual(parseObject(validTour({ context: { file: 'context.md' } })).ok && 'ok', 'ok');
   });
 });

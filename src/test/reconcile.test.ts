@@ -13,7 +13,7 @@ function annotation(id: string, line: number, extra: Partial<Annotation> = {}): 
     anchorText: `line ${line}`,
     order: 1,
     title: id,
-    comment: '',
+    content: '',
     highlights: [],
     watches: [],
     ...extra,

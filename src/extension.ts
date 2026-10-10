@@ -4,6 +4,7 @@ import { StepCodeLensProvider } from './codeLens';
 import { CONTEXT_SCHEME, contextContentProvider, registerCommands } from './commands';
 import { StepDecorations } from './decorations';
 import { StepSelection } from './selection';
+import { StepPage } from './stepPage';
 import { StaleTracker } from './staleTracker';
 import { StepView } from './stepView';
 import { StopController } from './stopController';
@@ -21,6 +22,7 @@ export interface MinuetApi {
   stepView: StepView;
   decorations: StepDecorations;
   tours: Tours;
+  page: StepPage;
 }
 
 export async function activate(context: vscode.ExtensionContext): Promise<MinuetApi> {
@@ -39,7 +41,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<Minuet
     isOpen: () => tours.activeFile !== undefined,
     onDidChange: tours.onDidChange,
   });
-  const stepView = new StepView(context.extensionUri, store, staleTracker, stops, selection);
+  const page = new StepPage(store, tours, stops, selection);
+  const stepView = new StepView(context.extensionUri, store, staleTracker, stops, selection, tours, page);
   const codeLens = new StepCodeLensProvider(store, staleTracker);
   const contextProvider = contextContentProvider(store);
 
@@ -53,18 +56,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<Minuet
     decorations,
     toursView,
     tourView,
+    page,
     stepView,
     codeLens,
     contextProvider,
     vscode.workspace.registerTextDocumentContentProvider(CONTEXT_SCHEME, contextProvider),
     vscode.window.registerUriHandler(new MinuetUriHandler(tours)),
-    ...registerCommands({ extensionUri: context.extensionUri, store, staleTracker, stops, selection, stepView, tours }),
+    ...registerCommands({ extensionUri: context.extensionUri, store, staleTracker, stops, selection, stepView, tours, page }),
   );
 
   // The open tour must be loaded before the breakpoints are reconciled with it.
   await tours.restore();
   breakpointSync.start();
-  return { store, staleTracker, stops, selection, stepView, decorations, tours };
+  return { store, staleTracker, stops, selection, stepView, decorations, tours, page };
 }
 
 export function deactivate(): void {

@@ -54,7 +54,7 @@
   and saves the tour in `.minuet/`. VS Code opens it after you confirm.
 - **You run it for real.** Start the test in the debugger. At each step you see what happens, why it matters and
   the actual values, objects included.
-- **Tours are plain files.** Each tour is a `.tour.json` in the `.minuet/` folder of the project. Commit it to
+- **Tours are plain files.** Each tour is a folder in `.minuet/` with a `tour.json`. Commit it to
   share the walkthrough with your team, or keep it on your machine.
 
 You can also build tours by hand, share them as JSON, and use them with any program or test runner you can debug
@@ -64,14 +64,14 @@ in VS Code: JavaScript/TypeScript, Python, Go, Java, C# and more.
 
 Each step is a breakpoint with:
 
-- a **title** and a markdown **comment**,
+- a **title** and its **content**: markdown, or a markdown or HTML file (a page with diagrams, tables…),
 - one or more **highlighted code ranges** (with an optional note),
 - **expressions to evaluate** for that step (for example `event.body.orderId`).
 
 When execution stops at an annotated breakpoint, the extension:
 
 - highlights the ranges in the code,
-- shows the step in the **Current Step** view: title, comment and the real value of each expression, evaluated
+- shows the step in the **Current Step** view: title, content and the real value of each expression, evaluated
   against the current frame. Objects can be expanded.
 
 It is not a new debugger. Execution is the usual one (a program, a test, a debug terminal), in whatever language
@@ -120,7 +120,7 @@ vscode://martindotts.minuet/open?file=<absolute, URL-encoded path of the tour fi
 For example, from a terminal on macOS:
 
 ```bash
-open "vscode://martindotts.minuet/open?file=%2Fpath%2Fto%2Frepo%2F.minuet%2Fmy.tour.json"
+open "vscode://martindotts.minuet/open?file=%2Fpath%2Fto%2Frepo%2F.minuet%2Fmy-tour%2Ftour.json"
 ```
 
 On Linux use `xdg-open`, on Windows `Start-Process`.
@@ -142,14 +142,14 @@ All commands are in the Command Palette (**minuet: …**). They are also in the 
 
 | Command | What it does |
 | --- | --- |
-| **Annotate Breakpoint on This Line** | Creates a breakpoint on the cursor line if there is none. Asks for a title and a comment. If no tour is open, asks which one to add the step to, or creates a new one. |
+| **Annotate Breakpoint on This Line** | Creates a breakpoint on the cursor line if there is none. Asks for a title and its content. If no tour is open, asks which one to add the step to, or creates a new one. |
 | **Highlight Selection in Annotation…** | Adds the selected lines to an annotation in the same file. Suggests the nearest one above by default. Asks for an optional note. |
 | **Add Expression to Evaluate…** | Adds an expression to the step. If text is selected, it is used as the initial value. |
-| **Edit Annotation** | Changes the title, comment, order, expressions or highlights. If the step is outdated, it can be re-anchored. |
+| **Edit Annotation** | Changes the title, content, order, expressions or highlights. If the step is outdated, it can be re-anchored. |
 | **Delete Annotation** | Deletes the annotation. The breakpoint is kept. |
 | **Order Steps by Last Run** | Renumbers the tour following the order in which the last run stopped at each step. Steps that did not run go to the end. Shows the new order before applying it. |
-| **New Tour…** | Asks for a title and creates `.minuet/<title>.tour.json`, empty, and opens it. |
-| **Open Tour…** | Opens a tour of the tours folder (also by clicking it in **Tours**, or right-clicking a `.tour.json` in the Explorer). A file from elsewhere is copied into the folder first. |
+| **New Tour…** | Asks for a title and creates `.minuet/<title>/tour.json`, empty, and opens it. |
+| **Open Tour…** | Opens a tour of the tours folder (also by clicking it in **Tours**, or right-clicking a `tour.json` in the Explorer). A tour from elsewhere is copied into the folder first, with its files. |
 | **Close Tour** | Takes the tour out of VS Code with the breakpoints of its steps. Its file is kept. |
 | **Delete Tour…** | Deletes the tour file (to the trash). |
 | **Open Tour File** | Opens the tour's JSON in the editor. |
@@ -165,11 +165,11 @@ Placing the cursor on an annotated line also selects its step (turn it off with 
 
 The panel has its own icon in the Activity Bar, with two views:
 
-- **Tours**: the `.tour.json` files of the tours folder. The open one is marked. Click a tour to open it (the
+- **Tours**: the tours of the tours folder. The open one is marked. Click a tour to open it (the
   current one is closed first). ✕ closes it; the context menu opens its file or deletes it. The list follows
   the folder: a tour copied there, committed by a teammate or written by an agent shows up by itself.
 - **Steps**: the open tour.
-  - the tour **context**, if there is one (first node; click it to open it as markdown),
+  - the tour **context**, if there is one (first node; click it to read it),
   - the steps **in order**: `1. title  file:line`,
   - a ⚠ icon on **outdated** steps,
   - during a session, the step where execution is **stopped**.
@@ -187,7 +187,9 @@ selected step. It contains:
   - Without a debug session, the ◀ ▶ buttons browse the tour so you can read it. They do not run code.
   - During a session only "Step X of Y" is shown. Use the native debugger controls to move forward.
 - **Outdated warning**, with a **Re-anchor** button.
-- **Comment** in markdown. ✎ edits the title and the comment. ⌘/Ctrl+Enter saves and Esc cancels.
+- **Content**: markdown or an HTML page, drawn here. ⤢ opens it in the **Step Page** tab, with more room. ✎
+  edits the title and inline markdown (content from a file is edited in its file).
+  ⌘/Ctrl+Enter saves and Esc cancels.
 - **Expressions** as a tree: each one with its value, colored by type.
   - Objects expand on click and their children are loaded on demand, with no depth limit.
   - Hovering a row shows buttons to copy the value or remove the expression.
@@ -277,22 +279,52 @@ Notes:
 
 ## Tour files
 
-A tour is a `.tour.json` file in the tours folder: `.minuet/` at the root of the project, or the folder set in
-`minuet.toursFolder`. That folder is the only place tours live:
+Tours live in the tours folder: `.minuet/` at the root of the project, or the folder set in
+`minuet.toursFolder`. Each tour is a folder with its `tour.json` and the files of its steps:
 
-- **To add a tour**, put its file in the folder: copy it, pull it from git, or let an agent write it. To share
-  one, commit it. To get rid of one, delete it.
+```
+.minuet/
+  orders/
+    tour.json
+    context.md
+    discount.html
+    style.css
+  quick-look.tour.json      ← a tour can also be a single file
+```
+
+That folder is the only place tours live:
+
+- **To add a tour**, put it in the folder: copy it, pull it from git, or let an agent write it. To share one,
+  commit it. To get rid of one, delete it.
 - **One tour is open at a time.** Opening it sets a breakpoint for each step; closing it (or opening another)
   removes them, so only the open tour stops your debug sessions.
-- **Every change is written to the file right away**: a new step, an edited comment, a breakpoint that moves
-  when you edit the code above it. The tour stays in sync with the code it describes, and a commit that moves
-  code also updates its tours.
-- **Changes to the file are picked up.** If the open tour's file changes on disk (a `git pull`, an agent, a hand
-  edit), the tour reloads and its breakpoints follow. If the file is deleted, the tour is closed.
+- **Every change is written to the file right away**: a new step, edited content, a breakpoint that moves when
+  you edit the code above it. The tour stays in sync with the code it describes, and a commit that moves code
+  also updates its tours.
+- **Changes on disk are picked up.** If the open tour's files change (a `git pull`, an agent, a hand edit), the
+  tour and its pages reload and its breakpoints follow. If the tour is deleted, it is closed.
 - The first time the folder is created in a git repository, minuet asks whether to share the tours or keep them
   local. Keeping them local adds the folder to `.git/info/exclude`, an ignore list that is not committed.
 
 When the extension rewrites a file, `//` comments in it are not kept.
+
+### Step content
+
+`content` (and the tour's `context`) is either markdown text or a file, relative to the folder of `tour.json`:
+
+```jsonc
+"content": "The rate comes from the `DISCOUNTS` table."
+"content": { "file": "discount.md" }
+"content": { "file": "discount.html" }
+```
+
+Both are shown in **Current Step**; ⤢ opens them in the **Step Page** tab, next to the code, with more room.
+
+- **An HTML page is static: HTML and CSS, never scripts.** Scripts, `on…` handlers and frames are dropped, so
+  opening a tour never runs code from it. Use SVG for diagrams and `<details>` for parts to expand.
+- The page is drawn isolated: its css does not affect the panel, and the panel's does not affect it.
+- It can use the files next to it (css, images, fonts), but nothing from the network.
+- Content files cannot be outside the workspace.
 
 ### Tour file format
 
@@ -310,7 +342,7 @@ This is the contract agents use.
       "line": 42,
       "anchorText": "const { orderId, customer } = event.body;",
       "title": "The order event arrives",
-      "comment": "markdown...",
+      "content": "markdown...",
       "highlights": [{ "startLine": 48, "endLine": 61, "note": "data taken from the body" }],
       "watches": ["event.body.orderId", "customer.email"]
     }
@@ -324,7 +356,7 @@ Root:
 | --- | --- | --- | --- |
 | `version` | `1` | yes | Format version. |
 | `title` | string | no | Tour title. Shown in the panel. |
-| `context` | string (markdown) | no | Starting point. It is the first node of the panel. |
+| `context` | markdown or `{ "file" }` | no | Starting point. It is the first node of the panel. See [Step content](#step-content). |
 | `steps` | list | yes | At least one step. |
 
 Each step:
@@ -336,7 +368,7 @@ Each step:
 | `line` | integer ≥ 1 | yes | Breakpoint line, **starting at 1** (as shown in the editor). One step per line. |
 | `anchorText` | string | recommended | Text of that line as it is in the file (compared without leading or trailing spaces, and with inner whitespace collapsed). If it does not match, the step is still opened and marked as outdated. If missing, the current text of the line is used. |
 | `title` | string | yes | Short step title. |
-| `comment` | string (markdown) | no | Explanation of the step. |
+| `content` | markdown or `{ "file" }` | no | Explanation of the step: markdown text, or a `.md` / `.html` file relative to the tour's folder. |
 | `highlights` | list | no | Ranges in the **same file**: `{ "startLine", "endLine", "note"? }`, starting at 1, `endLine` inclusive. |
 | `watches` | list of strings | no | Expressions in the program's language, evaluated in the stopped frame, with the same rules as the *Watch* view. |
 
@@ -364,11 +396,11 @@ steps[3].file: file "src/foo.ts" does not exist (looked for /path/to/workspace/s
 5. **`order` must follow the execution order, not the reading order.** If the step on line 29 calls a function
    that has a step inside, that step goes right after it, before the step on line 30. If the order ends up
    wrong, the user can fix it with **Order Steps by Last Run**.
-6. Few steps (5 to 8) with short comments. Whole objects can be used as expressions (`event.body`): they expand
+6. Few steps (5 to 8) with short content. Whole objects can be used as expressions (`event.body`): they expand
    in the view.
 7. Avoid expressions with side effects (calls that change state). They are evaluated in the real run.
 
-A complete example is in `examples/sample-node/.minuet/orders.tour.json`.
+A complete example is in `examples/sample-node/.minuet/orders/`.
 
 ---
 
@@ -411,7 +443,8 @@ Colors can be changed in `workbench.colorCustomizations`:
 ## Sample project
 
 `examples/sample-node` has a module (`src/orders.js`) that builds the notification text of an order, a test
-(`node --test`) and a 5-step tour (`.minuet/orders.tour.json`).
+(`node --test`) and a 5-step tour (`.minuet/orders/`): its context is a `.md` file and step 3 is explained in
+an HTML page with a table and an SVG diagram.
 
 1. Press **F5** in this project and pick **Node.js**. A development window opens with the sample.
 2. **Tours** → click *How the order notification text is built*.
@@ -458,6 +491,7 @@ npm run package    # builds the .vsix
 | `src/stepView.ts` | "Current Step" view (extension side). |
 | `src/webview/` | "Current Step" view (webview script and message protocol). |
 | `src/navigation.ts` | Opening a step in the editor. |
+| `src/stepPage.ts` | "Step Page" tab: a step's content (markdown or an HTML page) in an editor tab. |
 | `src/tours.ts` | Tour files: the tours folder, the "Tours" view, open, close, create, delete, write and reload. |
 | `src/commands.ts` | Commands. |
 | `src/uriHandler.ts` | `vscode://martindotts.minuet/open` URI. |

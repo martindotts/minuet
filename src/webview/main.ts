@@ -26,7 +26,7 @@ let nextRequestId = 1;
 
 let editing = false;
 let draftTitle = '';
-let draftComment = '';
+let draftContent = '';
 let draftWatch = '';
 
 function post(message: FromWebview): void {
@@ -195,7 +195,8 @@ function renderHeader(s: StepViewState): HTMLElement {
     'div',
     { className: 'title-row' },
     el('h2', { text: step.title }),
-    !editing && button('✎', 'Edit title and comment', startEditing),
+    !editing && button('⤢', 'Open the content in a tab', () => post({ type: 'openPage', id: step.id })),
+    !editing && button('✎', step.contentText === undefined ? 'Edit the title' : 'Edit title and content', startEditing),
   );
   return el('header', {}, nav, titleRow, location, s.stopped && el('div', { className: 'badge', text: '● Stopped at this step' }));
 }
@@ -206,9 +207,9 @@ function startEditing(): void {
   }
   editing = true;
   draftTitle = state.step.title;
-  draftComment = state.step.comment;
+  draftContent = state.step.contentText ?? '';
   render();
-  root.querySelector<HTMLTextAreaElement>('textarea')?.focus();
+  (root.querySelector<HTMLTextAreaElement>('textarea') ?? root.querySelector<HTMLInputElement>('input'))?.focus();
 }
 
 function renderEditor(): HTMLElement {
@@ -219,16 +220,29 @@ function renderEditor(): HTMLElement {
   title.placeholder = 'Title';
   title.addEventListener('input', () => (draftTitle = title.value));
 
-  const comment = el('textarea', { className: 'input' });
-  comment.dataset.role = 'comment';
-  comment.value = draftComment;
-  comment.placeholder = 'Comment in markdown';
-  comment.rows = Math.min(20, Math.max(6, draftComment.split('\n').length + 1));
-  comment.addEventListener('input', () => (draftComment = comment.value));
+  // Content from a file is edited in its file; here only the title.
+  const fromFile = step.contentText === undefined;
+  let content: HTMLElement;
+  if (fromFile) {
+    content = el(
+      'p',
+      { className: 'muted' },
+      `The content is in ${step.contentFile ?? 'a file'}. `,
+      button('Open file', 'Open the content file in the editor', () => post({ type: 'openContentFile', id: step.id }), 'secondary'),
+    );
+  } else {
+    const textarea = el('textarea', { className: 'input' });
+    textarea.dataset.role = 'content';
+    textarea.value = draftContent;
+    textarea.placeholder = 'Content in markdown';
+    textarea.rows = Math.min(20, Math.max(6, draftContent.split('\n').length + 1));
+    textarea.addEventListener('input', () => (draftContent = textarea.value));
+    content = textarea;
+  }
 
   const save = (): void => {
     editing = false;
-    post({ type: 'save', id: step.id, title: draftTitle, comment: draftComment });
+    post({ type: 'save', id: step.id, title: draftTitle, content: fromFile ? undefined : draftContent });
     render();
   };
   const cancel = (): void => {
@@ -239,7 +253,7 @@ function renderEditor(): HTMLElement {
     'form',
     { className: 'editor' },
     title,
-    comment,
+    content,
     el(
       'div',
       { className: 'editor-actions' },
@@ -274,18 +288,99 @@ function renderStale(s: StepViewState): HTMLElement | undefined {
   );
 }
 
-function renderComment(s: StepViewState): HTMLElement {
+/** Drops everything that could run code: scripts, frames, plugins, `on…` handlers and `javascript:` URLs. */
+function sanitize(root: ParentNode): void {
+  root.querySelectorAll('script, iframe, frame, frameset, object, embed, base, meta, noscript').forEach((n) => n.remove());
+  root.querySelectorAll('*').forEach((node) => {
+    for (const attr of [...node.attributes]) {
+      const name = attr.name.toLowerCase();
+      const isUrl = ['href', 'src', 'action', 'formaction', 'xlink:href'].includes(name);
+      if (name.startsWith('on') || (isUrl && /^\s*javascript:/i.test(attr.value))) {
+        node.removeAttribute(attr.name);
+      }
+    }
+  });
+}
+
+const ABSOLUTE = /^([a-z][a-z0-9+.-]*:|#|\/\/)/i;
+
+function resolveCssUrls(css: string, base: string): string {
+  return css.replace(/url\(\s*(['"]?)([^'")]+)\1\s*\)/g, (match, quote: string, url: string) =>
+    ABSOLUTE.test(url.trim()) ? match : `url(${quote}${new URL(url.trim(), base).toString()}${quote})`,
+  );
+}
+
+/** Makes the relative paths of the content (images, stylesheets, css url()) point to its folder. */
+function resolveUrls(root: ParentNode, base: string | undefined): void {
+  if (!base) {
+    return;
+  }
+  root.querySelectorAll('[src], [href], [poster]').forEach((node) => {
+    for (const name of ['src', 'href', 'poster']) {
+      const value = node.getAttribute(name);
+      if (value && !ABSOLUTE.test(value.trim())) {
+        node.setAttribute(name, new URL(value.trim(), base).toString());
+      }
+    }
+  });
+  root.querySelectorAll('style').forEach((style) => (style.textContent = resolveCssUrls(style.textContent ?? '', base)));
+  root.querySelectorAll('[style]').forEach((node) => node.setAttribute('style', resolveCssUrls(node.getAttribute('style') ?? '', base)));
+}
+
+/**
+ * Draws an HTML page inside the view, isolated in a shadow root so its css and ours do not mix. Its scripts
+ * never run: they are dropped here and the view's CSP blocks any left.
+ */
+function renderPage(html: string, base: string | undefined): HTMLElement {
+  const host = el('div', { className: 'page' });
+  const shadow = host.attachShadow({ mode: 'open' });
+  const page = new DOMParser().parseFromString(html, 'text/html');
+  sanitize(page);
+  resolveUrls(page, base);
+  const styles = [...page.head.querySelectorAll('link[rel~="stylesheet"], style')];
+  // <html> and <body> wrappers, so the page's own `html { }` and `body { }` rules still apply.
+  const pageHtml = document.createElement('html');
+  const pageBody = document.createElement('body');
+  for (const attr of [...page.body.attributes]) {
+    pageBody.setAttribute(attr.name, attr.value);
+  }
+  pageBody.append(...[...page.body.childNodes].map((n) => document.importNode(n, true)));
+  pageHtml.append(pageBody);
+  shadow.append(...styles.map((n) => document.importNode(n, true)), pageHtml);
+  return host;
+}
+
+function renderContent(s: StepViewState): HTMLElement {
   if (editing) {
     return renderEditor();
   }
-  const comment = el('div', { className: 'comment' });
-  if (s.step!.commentHtml) {
+  const step = s.step!;
+  const content = el('div', { className: 'comment' });
+  const openFile = (): HTMLElement => {
+    const link = el('a', { text: step.contentFile ?? '', title: 'Open the file in the editor' });
+    link.href = '#';
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      post({ type: 'openContentFile', id: step.id });
+    });
+    return link;
+  };
+  if (step.contentError) {
+    content.append(el('p', { className: 'error', text: step.contentError }));
+  } else if (step.contentPage) {
+    content.append(renderPage(step.contentHtml, step.contentBase), el('p', { className: 'muted source' }, 'From ', openFile()));
+  } else if (step.contentHtml) {
     // Rendered by VS Code's markdown engine; the CSP blocks any script inside it.
-    comment.innerHTML = s.step!.commentHtml;
+    content.innerHTML = step.contentHtml;
+    sanitize(content);
+    resolveUrls(content, step.contentBase);
+    if (step.contentFile) {
+      content.append(el('p', { className: 'muted source' }, 'From ', openFile()));
+    }
   } else {
-    comment.append(el('p', { className: 'muted', text: 'No comment.' }));
+    content.append(el('p', { className: 'muted', text: 'No content.' }));
   }
-  return comment;
+  return content;
 }
 
 function renderHighlights(s: StepViewState): HTMLElement {
@@ -412,7 +507,7 @@ function renderView(): void {
   if (stale) {
     root.append(stale);
   }
-  root.append(renderComment(s), renderWatches(s), renderHighlights(s));
+  root.append(renderContent(s), renderWatches(s), renderHighlights(s));
   restoreFocus?.();
 }
 

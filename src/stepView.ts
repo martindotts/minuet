@@ -1,13 +1,15 @@
 import { randomBytes } from 'crypto';
 import * as vscode from 'vscode';
-import { Highlight } from './model';
+import { Content, Highlight, isFileContent, isHtmlFile } from './model';
 import { toOneBased } from './lines';
 import { openStep, revealLines, selectionLines, stepLocation } from './navigation';
 import { StepSelection } from './selection';
 import { readLine, StaleTracker } from './staleTracker';
-import { buildStepState, neighbourId } from './stepState';
+import { StepPage } from './stepPage';
+import { buildStepState, ContentView, neighbourId } from './stepState';
 import { StopController } from './stopController';
 import { AnnotationStore } from './store';
+import { Tours } from './tours';
 import { FromWebview, StepViewState, ToWebview, VariableView } from './webview/protocol';
 
 export const STEP_VIEW_ID = 'minuet.step';
@@ -16,7 +18,7 @@ function escapeHtml(text: string): string {
   return text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 }
 
-/** "Current Step": the shown step's comment and its watch values as an expandable tree. */
+/** "Current Step": the shown step's content and its watch values as an expandable tree. */
 export class StepView implements vscode.WebviewViewProvider, vscode.Disposable {
   private view: vscode.WebviewView | undefined;
   private ready = false;
@@ -34,9 +36,12 @@ export class StepView implements vscode.WebviewViewProvider, vscode.Disposable {
     private readonly staleTracker: StaleTracker,
     private readonly stops: StopController,
     private readonly selection: StepSelection,
+    private readonly tours: Tours,
+    private readonly page: StepPage,
   ) {
     this.disposables.push(
       vscode.window.registerWebviewViewProvider(STEP_VIEW_ID, this),
+      tours.onDidChangeContent(() => void this.refresh()),
       store.onDidChange(() => void this.refresh()),
       staleTracker.onDidChange(() => void this.refresh()),
       stops.onDidChange(() => void this.refresh()),
@@ -72,7 +77,7 @@ export class StepView implements vscode.WebviewViewProvider, vscode.Disposable {
     this.ready = false;
     const dist = vscode.Uri.joinPath(this.extensionUri, 'dist');
     const media = vscode.Uri.joinPath(this.extensionUri, 'media');
-    view.webview.options = { enableScripts: true, localResourceRoots: [dist, media] };
+    view.webview.options = { enableScripts: true, localResourceRoots: [dist, media, ...this.contentRoots()] };
     view.webview.html = this.html(view.webview, dist, media);
     view.webview.onDidReceiveMessage((m: FromWebview) => void this.onMessage(m), undefined, this.disposables);
     view.onDidDispose(() => {
@@ -81,7 +86,7 @@ export class StepView implements vscode.WebviewViewProvider, vscode.Disposable {
     });
   }
 
-  /** Shows a step and switches its comment to edit mode. */
+  /** Shows a step and switches its content to edit mode. */
   async edit(id: string): Promise<void> {
     this.selection.select(id);
     this.pendingEdit = true;
@@ -95,7 +100,7 @@ export class StepView implements vscode.WebviewViewProvider, vscode.Disposable {
     const seq = ++this.renderSeq;
     const stop = this.stops.current;
     const shown = this.store.get(stop?.annotationId ?? this.selection.selectedId ?? '');
-    const commentHtml = shown ? await this.renderMarkdown(shown.comment) : '';
+    const content = shown ? await this.renderContent(shown.content) : { html: '', page: false };
     if (seq !== this.renderSeq) {
       return;
     }
@@ -106,7 +111,7 @@ export class StepView implements vscode.WebviewViewProvider, vscode.Disposable {
       inSession: vscode.debug.activeDebugSession !== undefined,
       isStale: (id) => this.staleTracker.isStale(id),
       location: stepLocation,
-      commentHtml,
+      content,
     });
     this.lastState = state;
     if (this.view && this.ready) {
@@ -116,6 +121,39 @@ export class StepView implements vscode.WebviewViewProvider, vscode.Disposable {
         await this.post({ type: 'edit' });
       }
     }
+  }
+
+  private async renderContent(content: Content): Promise<ContentView> {
+    const tourDir = this.tours.activeFile ? vscode.Uri.joinPath(this.tours.activeFile, '..') : undefined;
+    if (!isFileContent(content)) {
+      return { html: await this.renderMarkdown(content), base: this.baseUrl(tourDir), page: false };
+    }
+    const file = content.file;
+    const page = isHtmlFile(file);
+    const resolved = this.tours.resolveContentFile(file);
+    if ('error' in resolved) {
+      return { html: '', file, page, error: resolved.error };
+    }
+    let text: string;
+    try {
+      text = new TextDecoder('utf-8').decode(await vscode.workspace.fs.readFile(resolved.uri));
+    } catch {
+      return { html: '', file, page, error: `The file ${file} does not exist (looked for ${resolved.uri.fsPath}).` };
+    }
+    const base = this.baseUrl(vscode.Uri.joinPath(resolved.uri, '..'));
+    // A page is sent as written: the webview drops its scripts and draws it isolated.
+    return { html: page ? text : await this.renderMarkdown(text), base, file, page };
+  }
+
+  /** URL of a folder inside the webview, so relative paths of the content resolve against it. */
+  private baseUrl(folder: vscode.Uri | undefined): string | undefined {
+    return folder && this.view ? `${this.view.webview.asWebviewUri(folder).toString()}/` : undefined;
+  }
+
+  /** The folders content may come from: the workspace and the tours folder. */
+  private contentRoots(): vscode.Uri[] {
+    const folders = (vscode.workspace.workspaceFolders ?? []).map((f) => f.uri);
+    return this.tours.folder ? [...folders, this.tours.folder] : folders;
   }
 
   private async renderMarkdown(markdown: string): Promise<string> {
@@ -192,7 +230,22 @@ export class StepView implements vscode.WebviewViewProvider, vscode.Disposable {
           void vscode.window.showWarningMessage('The title cannot be empty.');
           return;
         }
-        await this.store.update(message.id, { title, comment: message.comment });
+        await this.store.update(message.id, message.content === undefined ? { title } : { title, content: message.content });
+        return;
+      }
+      case 'openPage':
+        await this.page.showStep(message.id);
+        return;
+      case 'openContentFile': {
+        const annotation = this.store.get(message.id);
+        if (annotation && isFileContent(annotation.content)) {
+          const resolved = this.tours.resolveContentFile(annotation.content.file);
+          if ('uri' in resolved) {
+            await vscode.window.showTextDocument(resolved.uri, { viewColumn: vscode.ViewColumn.Beside });
+          } else {
+            void vscode.window.showWarningMessage(resolved.error);
+          }
+        }
         return;
       }
       case 'addWatch': {
@@ -334,12 +387,15 @@ export class StepView implements vscode.WebviewViewProvider, vscode.Disposable {
     const nonce = randomBytes(16).toString('base64');
     const script = webview.asWebviewUri(vscode.Uri.joinPath(dist, 'webview.js'));
     const style = webview.asWebviewUri(vscode.Uri.joinPath(media, 'stepView.css'));
+    // Content (markdown and pages) may bring its own css and images, but only from local files: nothing from
+    // the network, and no script but ours.
     const csp = [
       "default-src 'none'",
-      `style-src ${webview.cspSource}`,
+      `style-src ${webview.cspSource} 'unsafe-inline'`,
       `script-src 'nonce-${nonce}'`,
-      `img-src ${webview.cspSource} https: data:`,
-      `font-src ${webview.cspSource}`,
+      `img-src ${webview.cspSource} data:`,
+      `font-src ${webview.cspSource} data:`,
+      `media-src ${webview.cspSource} data:`,
     ].join('; ');
     return `<!DOCTYPE html>
 <html lang="en">

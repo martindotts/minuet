@@ -1,0 +1,19 @@
+body {
+  font-family: var(--vscode-font-family, system-ui, sans-serif);
+  color: var(--vscode-foreground, #333);
+  line-height: 1.5;
+  margin: 0;
+}
+code { font-family: var(--vscode-editor-font-family, monospace); }
+
+.flow { width: 100%; max-width: 420px; margin: 8px 0 12px; }
+.flow rect { fill: none; stroke: var(--vscode-panel-border, #999); }
+.flow rect.highlight { fill: #b180d722; stroke: #b180d7; }
+.flow text { fill: currentColor; font-size: 12px; text-anchor: middle; }
+.flow text.value { font-weight: bold; font-size: 14px; }
+.flow text.op { opacity: 0.7; }
+
+table { border-collapse: collapse; margin-bottom: 8px; }
+th, td { border: 1px solid var(--vscode-panel-border, #ccc); padding: 2px 10px; text-align: left; }
+tr.current { background: #b180d722; }
+details { opacity: 0.85; }

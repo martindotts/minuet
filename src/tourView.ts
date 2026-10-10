@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { Annotation } from './model';
+import { Annotation, contentText, isFileContent } from './model';
 import { toOneBased } from './lines';
 import { StepSelection } from './selection';
 import { StaleTracker } from './staleTracker';
@@ -123,9 +123,8 @@ export class TourView implements vscode.TreeDataProvider<TourNode>, vscode.Dispo
       return roots;
     }
     if (node.kind === 'context') {
-      return this.store
-        .getMeta()
-        .context.split(/\r?\n/)
+      return contentText(this.store.getMeta().context)
+        .split(/\r?\n/)
         .map((text, index) => ({ text: text.trimEnd(), index }))
         .filter((l) => l.text.trim() !== '')
         .map((l) => ({ kind: 'contextLine', text: l.text, index: l.index }));
@@ -150,16 +149,18 @@ export class TourView implements vscode.TreeDataProvider<TourNode>, vscode.Dispo
 
   private contextItem(): vscode.TreeItem {
     const meta = this.store.getMeta();
+    const file = isFileContent(meta.context) ? meta.context.file : undefined;
+    const text = contentText(meta.context);
     const item = new vscode.TreeItem(
       meta.title || 'Tour context',
-      meta.context.trim() ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None,
+      text.trim() ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None,
     );
     item.id = 'context';
-    item.description = meta.title ? 'contexto' : undefined;
+    item.description = file ?? (meta.title ? 'context' : undefined);
     item.iconPath = new vscode.ThemeIcon('book');
     item.contextValue = 'context';
-    if (meta.context.trim()) {
-      item.tooltip = new vscode.MarkdownString(meta.context);
+    if (file || text.trim()) {
+      item.tooltip = file ? `Context in ${file}` : new vscode.MarkdownString(text);
       item.command = { command: 'minuet.showContext', title: 'Show context' };
     }
     return item;
