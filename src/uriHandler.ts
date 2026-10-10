@@ -6,7 +6,7 @@ import { AnnotationStore } from './store';
 
 export type UriRequest = { action: 'import'; file: string } | { error: string };
 
-/** Parses the path and (already decoded) query of a vscode://martinthompson.stepwise/... URI. */
+/** Parses the path and (already decoded) query of a vscode://martindotts.stepwise/... URI. */
 export function parseUriRequest(uriPath: string, query: string): UriRequest {
   const action = uriPath.replace(/^\/+|\/+$/g, '');
   if (action !== 'import') {
@@ -25,7 +25,7 @@ export function parseUriRequest(uriPath: string, query: string): UriRequest {
 /**
  * Lets agents (or links) drive the extension through vscode:// URIs:
  *
- *   vscode://martinthompson.stepwise/import?file=<absolute path, URL-encoded>
+ *   vscode://martindotts.stepwise/import?file=<absolute path, URL-encoded>
  *
  * Every request is confirmed by the user before anything changes.
  */

@@ -48,7 +48,7 @@ suite('agents: Claude Code skill', () => {
   });
 
   test('documents the import URI the extension handles', () => {
-    const uri = /vscode:\/\/martinthompson\.stepwise\/import\?file=([^"\s]+)/.exec(text);
+    const uri = /vscode:\/\/martindotts\.stepwise\/import\?file=([^"\s]+)/.exec(text);
     assert.ok(uri, 'import URI in the skill');
     const request = parseUriRequest('/import', `file=${decodeURIComponent(uri[1])}`);
     assert.deepStrictEqual(request, { action: 'import', file: '/tmp/x.tour.json' });

@@ -94,13 +94,13 @@ creates a temporary one and tells you. You accept the import and run the test in
 ### Import URI
 
 ```
-vscode://martinthompson.stepwise/import?file=<absolute, URL-encoded path of the JSON>
+vscode://martindotts.stepwise/import?file=<absolute, URL-encoded path of the JSON>
 ```
 
 For example, from a terminal on macOS:
 
 ```bash
-open "vscode://martinthompson.stepwise/import?file=%2Ftmp%2Fmy.tour.json"
+open "vscode://martindotts.stepwise/import?file=%2Ftmp%2Fmy.tour.json"
 ```
 
 On Linux use `xdg-open`, on Windows `Start-Process`.
@@ -410,7 +410,7 @@ npm run package    # builds the .vsix
 | `src/navigation.ts` | Opening a step in the editor. |
 | `src/importExport.ts` | Import and export. |
 | `src/commands.ts` | Commands. |
-| `src/uriHandler.ts` | `vscode://martinthompson.stepwise/import` URI. |
+| `src/uriHandler.ts` | `vscode://martindotts.stepwise/import` URI. |
 | `resources/claude-skill/SKILL.md` | Claude Code skill installed by the command. |
 
 </details>

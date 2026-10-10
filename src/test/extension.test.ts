@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import { StepwiseApi } from '../extension';
 import { Annotation, EMPTY_META } from '../model';
 
-const EXTENSION_ID = 'martinthompson.stepwise';
+const EXTENSION_ID = 'martindotts.stepwise';
 const POLL_MS = 50;
 
 async function waitFor<T>(

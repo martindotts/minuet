@@ -115,11 +115,11 @@ Open the extension's URI with the **absolute**, URL-encoded path of the JSON:
 
 ```bash
 # macOS
-open "vscode://martinthompson.stepwise/import?file=%2Ftmp%2Fx.tour.json"
+open "vscode://martindotts.stepwise/import?file=%2Ftmp%2Fx.tour.json"
 # Linux
-xdg-open "vscode://martinthompson.stepwise/import?file=%2Ftmp%2Fx.tour.json"
+xdg-open "vscode://martindotts.stepwise/import?file=%2Ftmp%2Fx.tour.json"
 # Windows (PowerShell)
-Start-Process "vscode://martinthompson.stepwise/import?file=C%3A%5CUsers%5C...%5Cx.tour.json"
+Start-Process "vscode://martindotts.stepwise/import?file=C%3A%5CUsers%5C...%5Cx.tour.json"
 ```
 
 VS Code asks the user to confirm (Import, or Replace / Append if there is already a tour). If several VS Code
