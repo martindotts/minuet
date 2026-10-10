@@ -127,7 +127,7 @@ export function parseTourJson(text: string): ParseResult {
 }
 
 /** Validates an already parsed value against the tour format. */
-export function validateTour(raw: unknown): ParseResult {
+function validateTour(raw: unknown): ParseResult {
   const errors: string[] = [];
   const fail = (path: string, expected: string, value: unknown): void => {
     errors.push(`${path}: ${expected} (got ${describe(value)}).`);
@@ -368,7 +368,7 @@ export function stepFromFile(
   };
 }
 
-export function stepToFile(step: Step, file: string): TourFileStep {
+function stepToFile(step: Step, file: string): TourFileStep {
   return {
     order: step.order,
     file,

@@ -56,7 +56,7 @@ export function normalizeFsPath(p: string, platform: NodeJS.Platform = process.p
   return platform === 'darwin' || platform === 'win32' ? normalized.toLowerCase() : normalized;
 }
 
-export const DEFAULT_TOURS_FOLDER = '.minuet';
+const DEFAULT_TOURS_FOLDER = '.minuet';
 
 /**
  * Folder where tours live: the `minuet.toursFolder` setting, relative to the first workspace

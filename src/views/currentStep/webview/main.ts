@@ -188,7 +188,6 @@ function renderHeader(s: StepViewState): HTMLElement {
     'div',
     { className: 'title-row' },
     el('h2', { text: step.title }),
-    !editing && button('⤢', 'Open the content in a tab', () => post({ type: 'openPage', id: step.id })),
     !editing && button('✎', step.contentText === undefined ? 'Edit the title' : 'Edit title and content', startEditing),
   );
   return el('header', {}, nav, titleRow);
@@ -353,7 +352,7 @@ function renderContent(s: StepViewState): HTMLElement {
 
 /** The content of a step or of the tour context: markdown, or an HTML page drawn isolated. */
 function renderContentBody(info: ContentInfo, openFile: () => void): HTMLElement {
-  const content = el('div', { className: 'comment' });
+  const content = el('div', { className: 'content' });
   const fileLink = (): HTMLElement => {
     const link = el('a', { text: info.contentFile ?? '', title: 'Open the file in the editor' });
     link.href = '#';
@@ -387,12 +386,7 @@ function renderContext(s: StepViewState): HTMLElement[] {
   const position = el('span', { className: 'position', text: `${context.steps} ${context.steps === 1 ? 'step' : 'steps'}` });
   const start = button('▶', 'Go to the first step', () => post({ type: 'next' }));
   start.disabled = !s.navEnabled || context.steps === 0;
-  const titleRow = el(
-    'div',
-    { className: 'title-row' },
-    el('h2', { text: context.title }),
-    button('⤢', 'Open the context in a tab', () => post({ type: 'openContextPage' })),
-  );
+  const titleRow = el('div', { className: 'title-row' }, el('h2', { text: context.title }));
   return [
     el('header', {}, el('div', { className: 'nav' }, position, start), titleRow),
     renderContentBody(context, () => post({ type: 'openContextFile' })),

@@ -166,9 +166,9 @@ Placing the cursor on the line of a step also selects it (turn it off with `minu
 
 ### The minuet panel
 
-The panel has its own icon in the Activity Bar. Everything is there: **Tours** at the top and **Current Step**
-below it. The list of tours follows the folder: a tour copied there, committed by a teammate or written by an
-agent shows up by itself.
+The panel has its own icon in the Activity Bar, with the **Tours** of the tours folder. The list follows the
+folder: a tour copied there, committed by a teammate or written by an agent shows up by itself. Steps are read
+in **Current Step**, in the side bar on the right.
 
 - **Click a tour** to open it: the current one is closed first, and the new one expands into its steps and
   shows its context in Current Step. Clicking the open tour shows its context again.
@@ -177,17 +177,20 @@ agent shows up by itself.
 - **The open tour's steps**, in order: `1. title  file:line`, with ⚠ on **outdated** steps and, during a
   session, a marker on the step where execution is **stopped**. Clicking a step opens the file at that line
   and shows the step in Current Step. Step actions: move up, move down, edit and delete.
-- **Tour actions**: ✕ closes the open tour; the context menu opens its file or deletes it. The `…` menu of the
-  panel closes the tour, opens its file, orders the steps by execution and installs the agent skill.
+- **Tour actions**: ✕ closes the open tour; the context menu opens its file or deletes it. In the title bar, +
+  creates a tour (**New Tour**) and ⟳ reads the folder again (**Refresh Tours**); the `…` menu closes the tour,
+  opens its file, orders the steps by execution and installs the agent skill.
 
 ### The "Current Step" view
 
-It lives in minuet's panel, below **Tours**. It shows the step where execution is stopped or, when there is no
-stop, the selected step (or the tour's context, after clicking the tour).
+The one place where steps are read. It lives in the **secondary side bar**, on the right, so it stays in view
+next to **Tours** on the left and, when debugging, next to Run and Debug. (Before VS Code 1.106, which does not
+let extensions use the secondary side bar, it is shown below Tours.)
 
-When a debug session starts, VS Code switches the sidebar to Run and Debug. While a tour is open, minuet
-switches it back right away, so the step and its values stay in view; the focus stays where it was. Variables
-and Call Stack are one click away, in Run and Debug.
+It shows the step where execution is stopped or, when there is no stop, the selected step (or the tour's
+context, after clicking the tour). It opens when you click a tour or a step, or when execution stops at a step,
+without taking the focus from the editor. It only appears while there is a step or a context to show, so the
+side bar is not taken while no tour is in use. Like any view, it can be dragged elsewhere.
 
 It contains:
 
@@ -195,8 +198,7 @@ It contains:
   - Without a debug session, the ◀ ▶ buttons browse the tour so you can read it. They do not run code.
   - During a session only "Step X of Y" is shown. Use the native debugger controls to move forward.
 - **Outdated warning**, with a **Re-anchor** button.
-- **Content**: markdown or an HTML page, drawn here. ⤢ opens it in the **Step Page** tab, with more room. ✎
-  edits the title and inline markdown (content from a file is edited in its file).
+- **Content**: markdown or an HTML page, drawn here. ✎ edits the title and inline markdown (content from a file is edited in its file).
   ⌘/Ctrl+Enter saves and Esc cancels.
 - **Expressions** as a tree: each one with its value, colored by type.
   - Objects expand on click and their children are loaded on demand, with no depth limit.
@@ -327,7 +329,7 @@ When the extension rewrites a file, `//` comments in it are not kept.
 "content": { "file": "discount.html" }
 ```
 
-Both are shown in **Current Step**; ⤢ opens them in the **Step Page** tab, next to the code, with more room.
+Both are shown in **Current Step**, in the side bar on the right.
 
 - **An HTML page is static: HTML and CSS, never scripts.** Scripts, `on…` handlers and frames are dropped, so
   opening a tour never runs code from it. Use SVG for diagrams and `<details>` for parts to expand.
@@ -505,9 +507,7 @@ tested on its own; the other layers adapt it to VS Code.
 | `debug/stopController.ts` | Detects stops, finds the step, evaluates expressions and records the execution order. |
 | **`src/views/`** | **What the user sees.** |
 | `views/toursView.ts` | "Tours" view: the tours, and the open one's steps. |
-| `views/currentStep/` | "Current Step" view: provider, state, message protocol and webview script. |
-| `views/stayInMinuet.ts` | Keeps minuet's panel in view when a debug session starts. |
-| `views/stepPage.ts` | "Step Page" tab: a step's content in an editor tab. |
+| `views/currentStep/` | "Current Step" view: the provider, its state, the message protocol and the webview script. |
 | `views/decorations.ts`, `views/codeLens.ts` | Highlights, notes and the CodeLens of each step. |
 | `views/selection.ts`, `views/navigation.ts` | Selected step, and opening a step in the editor. |
 | **`src/agents/`** | **Coding agents.** |

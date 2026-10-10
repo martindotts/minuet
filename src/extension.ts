@@ -7,11 +7,9 @@ import { StaleTracker } from './tours/staleTracker';
 import { StepStore } from './tours/stepStore';
 import { Tours } from './tours/tours';
 import { StepCodeLensProvider } from './views/codeLens';
-import { CurrentStepView } from './views/currentStep/currentStepView';
+import { CurrentStepView, supportsSecondarySidebar } from './views/currentStep/currentStepView';
 import { StepDecorations } from './views/decorations';
 import { StepSelection } from './views/selection';
-import { StepPage } from './views/stepPage';
-import { stayInMinuet } from './views/stayInMinuet';
 import { ToursView } from './views/toursView';
 
 /** Returned from activate(); used by the integration tests. */
@@ -20,13 +18,14 @@ export interface MinuetApi {
   staleTracker: StaleTracker;
   stops: StopController;
   selection: StepSelection;
-  currentStepView: CurrentStepView;
+  currentStep: CurrentStepView;
   decorations: StepDecorations;
   tours: Tours;
-  page: StepPage;
 }
 
 export async function activate(context: vscode.ExtensionContext): Promise<MinuetApi> {
+  // Before VS Code 1.106 Current Step cannot go to the secondary side bar; package.json then shows it below Tours.
+  void vscode.commands.executeCommand('setContext', 'minuet.noSecondarySidebar', !supportsSecondarySidebar());
   const store = new StepStore();
   const staleTracker = new StaleTracker(store);
   const tours = new Tours(context.workspaceState, store, staleTracker);
@@ -38,8 +37,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<Minuet
   const selection = new StepSelection(store, stops);
   const decorations = new StepDecorations(store, stops, selection);
   const toursView = new ToursView(tours, store, staleTracker, stops, selection);
-  const page = new StepPage(store, tours, stops, selection);
-  const currentStepView = new CurrentStepView(context.extensionUri, store, staleTracker, stops, selection, tours, page);
+  const currentStep = new CurrentStepView(context.extensionUri, store, staleTracker, stops, selection, tours);
   const codeLens = new StepCodeLensProvider(store, staleTracker);
 
   context.subscriptions.push(
@@ -51,19 +49,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<Minuet
     selection,
     decorations,
     toursView,
-    page,
-    currentStepView,
+    currentStep,
     codeLens,
     vscode.window.registerUriHandler(new MinuetUriHandler(tours)),
     stops.onDidChange((stop) => void vscode.commands.executeCommand('setContext', 'minuet.stoppedAtStep', stop !== undefined)),
-    stayInMinuet(tours, stops, toursView),
-    ...registerCommands({ extensionUri: context.extensionUri, store, staleTracker, stops, selection, currentStepView, tours, page }),
+    ...registerCommands({ extensionUri: context.extensionUri, store, staleTracker, stops, selection, currentStep, tours }),
   );
 
   // The open tour must be loaded before the breakpoints are reconciled with it.
   await tours.restore();
   breakpointSync.start();
-  return { store, staleTracker, stops, selection, currentStepView, decorations, tours, page };
+  return { store, staleTracker, stops, selection, currentStep, decorations, tours };
 }
 
 export function deactivate(): void {

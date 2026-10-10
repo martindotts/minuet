@@ -134,24 +134,24 @@ suite('minuet (integration)', function () {
     await vscode.commands.executeCommand('minuet.focusStep', step(3).id);
     assert.strictEqual(api.selection.selectedId, step(3).id);
     const state = await waitFor(
-      () => (api.currentStepView.state?.step?.id === step(3).id ? api.currentStepView.state : undefined),
+      () => (api.currentStep.state?.step?.id === step(3).id ? api.currentStep.state : undefined),
       'Current Step shows step 3',
     );
     assert.strictEqual(state.navEnabled, true);
     assert.strictEqual(state.watchStatus, 'idle');
-    await waitFor(() => api.currentStepView.isReady, 'the Current Step webview script loads and reports ready');
+    await waitFor(() => api.currentStep.isReady, 'the Current Step webview script loads and reports ready');
     await waitFor(
-      () => api.currentStepView.rendered?.stepId === step(3).id && !api.currentStepView.rendered.stopped,
+      () => api.currentStep.rendered?.stepId === step(3).id && !api.currentStep.rendered.stopped,
       'Current Step draws step 3 without a debug session',
     );
-    assert.deepStrictEqual(api.currentStepView.errors, []);
+    assert.deepStrictEqual(api.currentStep.errors, []);
     assert.strictEqual(state.step?.contentPage, true, 'step 3 is explained in an HTML page');
     assert.strictEqual(state.step?.contentFile, 'discount.html');
     assert.strictEqual(api.decorations.paintedId, step(3).id, 'without a session the selected step is highlighted');
 
     await vscode.commands.executeCommand('minuet.focusStep', step(2).id);
     const second = await waitFor(
-      () => (api.currentStepView.state?.step?.id === step(2).id ? api.currentStepView.state : undefined),
+      () => (api.currentStep.state?.step?.id === step(2).id ? api.currentStep.state : undefined),
       'Current Step shows step 2',
     );
     assert.match(second.step?.contentHtml ?? '', /<code>total = unitPrice × quantity<\/code>/, 'markdown is rendered');
@@ -185,19 +185,19 @@ suite('minuet (integration)', function () {
         30000,
       );
       const view = await waitFor(
-        () => (api.currentStepView.state?.step?.id === id && api.currentStepView.state.watchStatus === 'values' ? api.currentStepView.state : undefined),
+        () => (api.currentStep.state?.step?.id === id && api.currentStep.state.watchStatus === 'values' ? api.currentStep.state : undefined),
         `Current Step shows the values of step ${order}`,
       );
       assert.strictEqual(view.stopped, true);
       assert.strictEqual(view.navEnabled, false, 'browsing is disabled while stopped');
       assert.strictEqual(view.generation, stop.generation);
       // Starting a session switches the sidebar to Run and Debug; a hidden webview draws nothing until shown.
-      await vscode.commands.executeCommand('minuet.currentStep.focus');
+      await api.currentStep.reveal();
       await waitFor(
-        () => api.currentStepView.rendered?.stepId === id && api.currentStepView.rendered.generation === stop.generation,
+        () => api.currentStep.rendered?.stepId === id && api.currentStep.rendered.generation === stop.generation,
         `Current Step draws step ${order} while stopped`,
       );
-      assert.deepStrictEqual(api.currentStepView.errors, []);
+      assert.deepStrictEqual(api.currentStep.errors, []);
       assert.strictEqual(api.decorations.paintedId, id, 'the stopped step is highlighted');
       const values = new Map(stop.watches?.map((w) => [w.expression, w]));
       for (const [expression, pattern] of Object.entries(expected)) {
@@ -402,24 +402,23 @@ suite('minuet (tour files)', function () {
     await waitFor(() => breakpointLines().join() === '13,19,28,31', 'the removed step loses its breakpoint');
   });
 
-  test('an HTML page is drawn in Current Step and in its tab, without scripts or network', async () => {
+  test('an HTML page is drawn in Current Step, without scripts or network', async () => {
     const third = api.store.all().find((a) => a.order === 3);
     assert.ok(third);
     await vscode.commands.executeCommand('minuet.focusStep', third.id);
     const state = await waitFor(
-      () => (api.currentStepView.state?.step?.id === third.id && api.currentStepView.state.step.contentBase ? api.currentStepView.state : undefined),
+      () => (api.currentStep.state?.step?.id === third.id && api.currentStep.state.step.contentBase ? api.currentStep.state : undefined),
       'Current Step gets the page and its folder',
     );
     assert.strictEqual(state.step?.contentPage, true);
     assert.match(state.step?.contentHtml ?? '', /<table>/, 'the page is sent as written');
     assert.match(state.step?.contentBase ?? '', /\/test-run\/$/, 'relative files resolve next to the page');
-    await waitFor(() => api.currentStepView.rendered?.stepId === third.id, 'Current Step draws the page');
-    assert.deepStrictEqual(api.currentStepView.errors, []);
+    await waitFor(() => api.currentStep.rendered?.stepId === third.id, 'Current Step draws the page');
+    assert.deepStrictEqual(api.currentStep.errors, []);
 
-    await api.page.showStep(third.id, { preserveFocus: true });
-    const html = await waitFor(() => api.page.document?.includes('<table>') && api.page.document, 'the tab shows the page');
-    assert.match(html, /<base href="[^"]+\/test-run\/">/, 'relative files resolve next to the page');
-    assert.match(html, /script-src 'none'/, 'no scripts');
+    // The tab's policy: only the extension's own script, and nothing from the network.
+    const html = api.currentStep.html ?? '';
+    assert.match(html, /script-src 'nonce-[^']+'(;|")/, 'no scripts but the view\'s own');
     assert.doesNotMatch(html, /connect-src/, 'no requests');
     const images = /img-src ([^;"]+)/.exec(html)?.[1].trim().split(/\s+/) ?? [];
     for (const source of images) {
@@ -430,7 +429,7 @@ suite('minuet (tour files)', function () {
   test('clicking the open tour shows its context in Current Step', async () => {
     await vscode.commands.executeCommand('minuet.openTour', testTourUri());
     const state = await waitFor(
-      () => (api.currentStepView.state?.context ? api.currentStepView.state : undefined),
+      () => (api.currentStep.state?.context ? api.currentStep.state : undefined),
       'Current Step shows the tour context',
     );
     assert.strictEqual(state.step, undefined);
@@ -440,16 +439,19 @@ suite('minuet (tour files)', function () {
 
     const first = api.store.all()[0];
     await vscode.commands.executeCommand('minuet.focusStep', first.id);
-    await waitFor(() => api.currentStepView.state?.step?.id === first.id, 'selecting a step leaves the context');
-    assert.strictEqual(api.currentStepView.state?.context, undefined);
+    await waitFor(() => api.currentStep.state?.step?.id === first.id, 'selecting a step leaves the context');
+    assert.strictEqual(api.currentStep.state?.context, undefined);
   });
 
   test('a markdown file is rendered, and edits to it show up', async () => {
-    await api.page.showContext();
-    await waitFor(() => api.page.document?.includes('Starting point'), 'context.md is rendered');
+    await api.currentStep.showContext();
+    await waitFor(() => api.currentStep.state?.context?.contentHtml.includes('Starting point'), 'context.md is rendered');
     const contextFile = vscode.Uri.joinPath(testTourDir(), 'context.md');
     await vscode.workspace.fs.writeFile(contextFile, new TextEncoder().encode('## Changed by hand\n'));
-    await waitFor(() => api.page.document?.includes('Changed by hand'), 'the page reloads when its file changes');
+    await waitFor(
+      () => api.currentStep.state?.context?.contentHtml.includes('Changed by hand'),
+      'Current Step reloads when the file changes',
+    );
   });
 
   test('closing a tour removes its steps and breakpoints, not its file', async () => {

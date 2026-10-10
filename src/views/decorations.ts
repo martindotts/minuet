@@ -82,7 +82,7 @@ export class StepDecorations implements vscode.Disposable {
         const lineEnd = doc.lineAt(start).range.end;
         notes.push({
           range: new vscode.Range(lineEnd, lineEnd),
-          // ◆ is the extension's mark: also used by the CodeLens and the tour panel.
+          // ◆ is the extension's mark: also used by the CodeLens and the Tours view.
           renderOptions: { after: { contentText: `◆ ${h.note}` } },
         });
       }

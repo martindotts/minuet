@@ -9,10 +9,9 @@ import { StopController } from './debug/stopController';
 import { readLine, StaleTracker } from './tours/staleTracker';
 import { StepStore } from './tours/stepStore';
 import { Tours } from './tours/tours';
-import { CURRENT_STEP_VIEW_ID, CurrentStepView } from './views/currentStep/currentStepView';
+import { CurrentStepView } from './views/currentStep/currentStepView';
 import { openStep, selectionLines } from './views/navigation';
 import { StepSelection } from './views/selection';
-import { StepPage } from './views/stepPage';
 import { TourNode } from './views/toursView';
 
 interface Services {
@@ -21,9 +20,8 @@ interface Services {
   staleTracker: StaleTracker;
   stops: StopController;
   selection: StepSelection;
-  currentStepView: CurrentStepView;
+  currentStep: CurrentStepView;
   tours: Tours;
-  page: StepPage;
 }
 
 interface Target {
@@ -118,7 +116,7 @@ async function pickStep(
   return picked?.step;
 }
 
-/** Step addressed by a command argument (tree item, comment, gutter, editor) or picked. */
+/** Step addressed by a command argument (tree item, step id, gutter, editor) or picked. */
 async function stepFromArg(
   services: Services,
   arg: unknown,
@@ -277,7 +275,7 @@ async function addWatch(services: Services, arg: unknown): Promise<void> {
 type EditAction = vscode.QuickPickItem & { action: () => Promise<void> };
 
 async function editStep(services: Services, arg: unknown): Promise<void> {
-  const { store, staleTracker, currentStepView } = services;
+  const { store, staleTracker, currentStep } = services;
   const step = await stepFromArg(services, arg, 'Edit the step…');
   if (!step) {
     return;
@@ -303,7 +301,7 @@ async function editStep(services: Services, arg: unknown): Promise<void> {
       description: isFileContent(step.content)
         ? `In ${step.content.file}`
         : 'Edited as markdown in the Current Step view',
-      action: () => currentStepView.edit(id),
+      action: () => currentStep.edit(id),
     },
     {
       label: '$(list-ordered) Order',
@@ -525,13 +523,6 @@ async function runTour(store: StepStore, tours: Tours): Promise<void> {
   }
 }
 
-/** Shows the open tour's context in Current Step. */
-async function showContext(services: Services): Promise<void> {
-  if (services.tours.activeFile) {
-    await services.currentStepView.showContext();
-  }
-}
-
 export function registerCommands(services: Services): vscode.Disposable[] {
   const { store, stops, selection } = services;
   const register = (id: string, handler: (...args: unknown[]) => unknown): vscode.Disposable =>
@@ -550,7 +541,7 @@ export function registerCommands(services: Services): vscode.Disposable[] {
       const uri = await tourFromArg(services.tours, arg, 'Open the tour…');
       // Opening a tour (or clicking the open one) shows its context.
       if (uri && (await services.tours.open(uri))) {
-        await showContext(services);
+        await services.currentStep.showContext();
       }
     }),
     register('closeTour', async () => {
@@ -580,13 +571,14 @@ export function registerCommands(services: Services): vscode.Disposable[] {
       if (step) {
         selection.select(step.id, 'tree');
         await openStep(step);
+        await services.currentStep.reveal();
       }
     }),
     register('focusStep', async (arg) => {
       const step = typeof arg === 'string' ? store.get(arg) : undefined;
       if (step) {
         selection.select(step.id, 'lens');
-        await vscode.commands.executeCommand(`${CURRENT_STEP_VIEW_ID}.focus`);
+        await services.currentStep.reveal();
       }
     }),
     register('runTour', () => runTour(store, services.tours)),
@@ -599,7 +591,6 @@ export function registerCommands(services: Services): vscode.Disposable[] {
         await store.update(step.id, { watches: [...step.watches, expression] });
       }
     }),
-    register('showContext', () => showContext(services)),
     register('installAgentSkill', () => installAgentSkill(services.extensionUri)),
   ];
 }

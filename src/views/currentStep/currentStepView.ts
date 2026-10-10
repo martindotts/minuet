@@ -8,17 +8,32 @@ import { StepStore } from '../../tours/stepStore';
 import { Tours } from '../../tours/tours';
 import { openStep, revealLines, selectionLines } from '../navigation';
 import { StepSelection } from '../selection';
-import { StepPage } from '../stepPage';
 import { FromWebview, StepViewState, ToWebview, VariableView } from './protocol';
 import { buildStepState, ContentView, neighbourId } from './state';
 
-export const CURRENT_STEP_VIEW_ID = 'minuet.currentStep';
+/** In the secondary side bar (right), next to the code, since VS Code 1.106. */
+const SECONDARY_VIEW_ID = 'minuet.currentStep';
+/** Before 1.106 extensions cannot use the secondary side bar: the view goes below Tours instead. */
+const FALLBACK_VIEW_ID = 'minuet.currentStepFallback';
+
+export function supportsSecondarySidebar(version = vscode.version): boolean {
+  const [major = 0, minor = 0] = version.split('.').map(Number);
+  return major > 1 || (major === 1 && minor >= 106);
+}
+
+function currentStepViewId(): string {
+  return supportsSecondarySidebar() ? SECONDARY_VIEW_ID : FALLBACK_VIEW_ID;
+}
 
 function escapeHtml(text: string): string {
   return text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 }
 
-/** "Current Step": the shown step's content and its watch values as an expandable tree. */
+/**
+ * "Current Step": the shown step (or the tour context) with its content, its expressions with their values as
+ * an expandable tree, and its highlights. It lives in the secondary side bar, so it stays in view while the
+ * primary one shows Tours or, when debugging, Run and Debug.
+ */
 export class CurrentStepView implements vscode.WebviewViewProvider, vscode.Disposable {
   private view: vscode.WebviewView | undefined;
   private ready = false;
@@ -31,6 +46,8 @@ export class CurrentStepView implements vscode.WebviewViewProvider, vscode.Dispo
   private readonly renderErrors: string[] = [];
   /** The tour was clicked: show its context until a step is selected or execution stops. */
   private showingContext = false;
+  /** Value of the `minuet.hasCurrentStep` context key: the view only exists while it has something to show. */
+  private available: boolean | undefined;
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -39,16 +56,18 @@ export class CurrentStepView implements vscode.WebviewViewProvider, vscode.Dispo
     private readonly stops: StopController,
     private readonly selection: StepSelection,
     private readonly tours: Tours,
-    private readonly page: StepPage,
   ) {
     this.disposables.push(
-      vscode.window.registerWebviewViewProvider(CURRENT_STEP_VIEW_ID, this),
+      vscode.window.registerWebviewViewProvider(SECONDARY_VIEW_ID, this),
+      vscode.window.registerWebviewViewProvider(FALLBACK_VIEW_ID, this),
       tours.onDidChangeContent(() => void this.refresh()),
       store.onDidChange(() => void this.refresh()),
       staleTracker.onDidChange(() => void this.refresh()),
       stops.onDidChange((stop) => {
         if (stop) {
+          // Execution reached a step: show it, without taking the focus from the editor.
           this.showingContext = false;
+          void this.reveal();
         }
         void this.refresh();
       }),
@@ -89,13 +108,18 @@ export class CurrentStepView implements vscode.WebviewViewProvider, vscode.Dispo
     return this.lastState;
   }
 
+  /** The webview document; used by tests. */
+  get html(): string | undefined {
+    return this.view?.webview.html;
+  }
+
   resolveWebviewView(view: vscode.WebviewView): void {
     this.view = view;
     this.ready = false;
     const dist = vscode.Uri.joinPath(this.extensionUri, 'dist');
     const media = vscode.Uri.joinPath(this.extensionUri, 'media');
     view.webview.options = { enableScripts: true, localResourceRoots: [dist, media, ...this.contentRoots()] };
-    view.webview.html = this.html(view.webview, dist, media);
+    view.webview.html = this.webviewHtml(view.webview, dist, media);
     view.webview.onDidReceiveMessage((m: FromWebview) => void this.onMessage(m), undefined, this.disposables);
     view.onDidDispose(() => {
       this.view = undefined;
@@ -103,19 +127,45 @@ export class CurrentStepView implements vscode.WebviewViewProvider, vscode.Dispo
     });
   }
 
+  /**
+   * Shows the view, opening its sidebar if needed. By default the focus stays where it was, so the editor
+   * (and the debugger's keys) keep working.
+   */
+  async reveal(preserveFocus = true): Promise<void> {
+    await this.setAvailable(true);
+    if (this.view) {
+      this.view.show(preserveFocus);
+      return;
+    }
+    // Not shown yet: focusing it is the way to open it, then the focus goes back to the editor.
+    await vscode.commands.executeCommand(`${currentStepViewId()}.focus`);
+    if (preserveFocus) {
+      await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
+    }
+  }
+
+  /** Shows or hides the view (and its side bar, when it is the only view there). */
+  private async setAvailable(available: boolean): Promise<void> {
+    if (this.available === available) {
+      return;
+    }
+    this.available = available;
+    await vscode.commands.executeCommand('setContext', 'minuet.hasCurrentStep', available);
+  }
+
   /** Shows the open tour's context (until a step is selected or execution stops at one). */
   async showContext(): Promise<void> {
     this.showingContext = true;
     this.selection.select(undefined);
-    await vscode.commands.executeCommand(`${CURRENT_STEP_VIEW_ID}.focus`);
     await this.refresh();
+    await this.reveal();
   }
 
   /** Shows a step and switches its content to edit mode. */
   async edit(id: string): Promise<void> {
     this.selection.select(id);
     this.pendingEdit = true;
-    await vscode.commands.executeCommand(`${CURRENT_STEP_VIEW_ID}.focus`);
+    await this.reveal(false);
     if (this.ready) {
       await this.refresh();
     }
@@ -156,6 +206,7 @@ export class CurrentStepView implements vscode.WebviewViewProvider, vscode.Dispo
       };
     }
     this.lastState = state;
+    await this.setAvailable(state.step !== undefined || state.context !== undefined);
     if (this.view && this.ready) {
       await this.post({ type: 'state', state });
       if (this.pendingEdit && state.step) {
@@ -273,18 +324,12 @@ export class CurrentStepView implements vscode.WebviewViewProvider, vscode.Dispo
         await this.store.update(message.id, message.content === undefined ? { title } : { title, content: message.content });
         return;
       }
-      case 'openPage':
-        await this.page.showStep(message.id);
-        return;
-      case 'openContextPage':
-        await this.page.showContext();
-        return;
       case 'openContextFile': {
         const context = this.store.getMeta().context;
         if (isFileContent(context)) {
           const resolved = this.tours.resolveContentFile(context.file);
           if ('uri' in resolved) {
-            await vscode.window.showTextDocument(resolved.uri, { viewColumn: vscode.ViewColumn.Beside });
+            await vscode.window.showTextDocument(resolved.uri);
           } else {
             void vscode.window.showWarningMessage(resolved.error);
           }
@@ -296,7 +341,7 @@ export class CurrentStepView implements vscode.WebviewViewProvider, vscode.Dispo
         if (step && isFileContent(step.content)) {
           const resolved = this.tours.resolveContentFile(step.content.file);
           if ('uri' in resolved) {
-            await vscode.window.showTextDocument(resolved.uri, { viewColumn: vscode.ViewColumn.Beside });
+            await vscode.window.showTextDocument(resolved.uri);
           } else {
             void vscode.window.showWarningMessage(resolved.error);
           }
@@ -438,7 +483,7 @@ export class CurrentStepView implements vscode.WebviewViewProvider, vscode.Dispo
     });
   }
 
-  private html(webview: vscode.Webview, dist: vscode.Uri, media: vscode.Uri): string {
+  private webviewHtml(webview: vscode.Webview, dist: vscode.Uri, media: vscode.Uri): string {
     const nonce = randomBytes(16).toString('base64');
     const script = webview.asWebviewUri(vscode.Uri.joinPath(dist, 'webview.js'));
     const style = webview.asWebviewUri(vscode.Uri.joinPath(media, 'currentStep.css'));

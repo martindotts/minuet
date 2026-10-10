@@ -91,12 +91,9 @@ export type FromWebview =
   | { type: 'reanchor'; id: string }
   /** `content` is undefined when the step's content is a file (only the title is edited here). */
   | { type: 'save'; id: string; title: string; content?: string }
-  /** Shows the step's content in the Step Page tab. */
-  | { type: 'openPage'; id: string }
   /** Opens the step's content file in the editor. */
   | { type: 'openContentFile'; id: string }
-  /** The same two, for the tour context. */
-  | { type: 'openContextPage' }
+  /** Opens the tour context's file in the editor. */
   | { type: 'openContextFile' }
   | { type: 'addWatch'; id: string; expression: string }
   | { type: 'removeWatch'; id: string; expression: string }

@@ -10,7 +10,7 @@ import { StepStore } from './stepStore';
 
 const ACTIVE_KEY = 'minuet.activeTour';
 /** File name of a tour stored as a folder: `.minuet/<name>/tour.json`, next to its content files. */
-export const TOUR_FILE_NAME = 'tour.json';
+const TOUR_FILE_NAME = 'tour.json';
 
 /** `<folder>/tour.json(c)`: a tour stored as a folder with its content files. */
 export function isFolderTour(fsPath: string): boolean {
@@ -18,12 +18,12 @@ export function isFolderTour(fsPath: string): boolean {
 }
 
 /** A tour file name: `tour.json` inside its folder, or `<name>.tour.json` on its own. */
-export function isTourFileName(name: string): boolean {
+function isTourFileName(name: string): boolean {
   return /^tour\.jsonc?$/i.test(name) || /\.tour\.jsonc?$/i.test(name);
 }
 
 /** True when the tour file belongs to the tours folder (directly, or as `<name>/tour.json`). */
-export function isInToursFolder(fsPath: string, folder: string): boolean {
+function isInToursFolder(fsPath: string, folder: string): boolean {
   return isFolderTour(fsPath) ? isDirectlyIn(path.dirname(fsPath), folder) : isDirectlyIn(fsPath, folder);
 }
 
@@ -65,7 +65,7 @@ export function toursFolder(): vscode.Uri | undefined {
 }
 
 /** The open tour in the file format. */
-export function serializeStore(store: StepStore): string {
+function serializeStore(store: StepStore): string {
   const folders = workspaceFolders();
   return serializeTour(
     buildTourFile(store.all(), store.getMeta(), (uri) => relativizePath(vscode.Uri.parse(uri).fsPath, folders)),

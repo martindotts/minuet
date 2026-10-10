@@ -3,7 +3,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
-export const SKILL_NAME = 'minuet';
+const SKILL_NAME = 'minuet';
 
 export interface Agent {
   label: string;

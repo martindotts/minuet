@@ -177,8 +177,7 @@ A short message with:
   configuration you wrote). If you could not write a `run` configuration, tell them how to run the test under
   the debugger instead,
 - if it is an existing test, which one and why; if it is temporary, that you created it and where,
-- that they move forward with **F5** (Continue); each step is shown in the **Current Step** view (in Run and
-  Debug), and they can add a variable to the step from the Variables view (right click → **Add to Step**),
+- that they move forward with **F5** (Continue); each step is shown in **Current Step**, in the side bar on the right, and they can add a variable to the step from the Variables view (right click → **Add to Step**),
 - that if the steps run in a different order, the extension offers **Order by Execution**.
 
 Do not repeat the content of each step in the chat: it is already in the tour. A one or two line summary of the

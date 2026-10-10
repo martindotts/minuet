@@ -8,7 +8,7 @@ import { StepStore } from '../tours/stepStore';
 import { isFolderTour, TourEntry, Tours } from '../tours/tours';
 import { StepSelection } from './selection';
 
-export const TOURS_VIEW_ID = 'minuet.tours';
+const TOURS_VIEW_ID = 'minuet.tours';
 
 /** A tour of the tours folder, or a step of the open tour. */
 export type TourNode = { kind: 'tour'; tour: TourEntry } | { kind: 'step'; step: Step };
@@ -84,14 +84,6 @@ export class ToursView implements vscode.TreeDataProvider<TourNode>, vscode.Disp
     const step = stop ? this.store.get(stop.stepId) : undefined;
     this.treeView.message = step ? `Stopped at step ${step.order}: ${step.title}` : undefined;
     this.changeEmitter.fire(undefined);
-  }
-
-  /** Brings minuet's sidebar back to the open tour, without taking the focus from the editor. */
-  showOpenTour(): void {
-    const node = this.openTourNode();
-    if (node) {
-      void this.treeView.reveal(node, { select: false, focus: false }).then(undefined, () => undefined);
-    }
   }
 
   private openTourNode(): TourNode | undefined {

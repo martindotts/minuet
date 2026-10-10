@@ -167,11 +167,6 @@
         "category": "minuet"
       },
       {
-        "command": "minuet.showContext",
-        "title": "Show Tour Context",
-        "category": "minuet"
-      },
-      {
         "command": "minuet.addVariableToStep",
         "title": "Add to Step",
         "category": "minuet"
@@ -195,10 +190,6 @@
         },
         {
           "command": "minuet.openStep",
-          "when": "false"
-        },
-        {
-          "command": "minuet.showContext",
           "when": "false"
         },
         {
@@ -307,6 +298,11 @@
           "command": "minuet.installAgentSkill",
           "group": "y_agents@1",
           "when": "view == minuet.tours"
+        },
+        {
+          "command": "minuet.closeTour",
+          "group": "navigation@9",
+          "when": "(view == minuet.currentStep || view == minuet.currentStepFallback) && minuet.hasTour"
         }
       ],
       "view/item/context": [
@@ -396,6 +392,14 @@
           "title": "minuet",
           "icon": "media/tour.svg"
         }
+      ],
+      "secondarySidebar": [
+        {
+          "id": "minuet-current-step",
+          "title": "minuet",
+          "icon": "media/tour.svg",
+          "when": "!minuet.noSecondarySidebar"
+        }
       ]
     },
     "views": {
@@ -408,10 +412,19 @@
         },
         {
           "type": "webview",
+          "id": "minuet.currentStepFallback",
+          "name": "Current Step",
+          "contextualTitle": "minuet",
+          "when": "minuet.noSecondarySidebar && minuet.hasCurrentStep"
+        }
+      ],
+      "minuet-current-step": [
+        {
+          "type": "webview",
           "id": "minuet.currentStep",
           "name": "Current Step",
           "contextualTitle": "minuet",
-          "visibility": "visible"
+          "when": "!minuet.noSecondarySidebar && minuet.hasCurrentStep"
         }
       ]
     },

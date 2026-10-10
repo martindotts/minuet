@@ -11,7 +11,7 @@ export interface SelectionChange {
 }
 
 /**
- * The step the user is looking at: picked in the tour panel, through the CodeLens, by moving the
+ * The step the user is looking at: picked in Tours, through the CodeLens, by moving the
  * cursor onto the line of a step, or the step where execution stopped.
  */
 export class StepSelection implements vscode.Disposable {
