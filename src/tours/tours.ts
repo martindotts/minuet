@@ -428,7 +428,7 @@ export class Tours implements vscode.Disposable {
     await this.withoutWriting(async () => {
       // Steps first, so the "added" breakpoint events find them already associated.
       await this.store.replaceAll(steps);
-      await this.store.setMeta({ title: loaded.tour.title, context: loaded.tour.context });
+      await this.store.setMeta({ title: loaded.tour.title, context: loaded.tour.context, run: loaded.tour.run });
     });
     this.written = serializeStore(this.store);
     this.diskText = text;

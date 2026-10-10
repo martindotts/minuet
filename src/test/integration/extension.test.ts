@@ -165,16 +165,9 @@ suite('minuet (integration)', function () {
   });
 
   test('debugging the sample test stops on every step with real watch values', async () => {
-    const started = await vscode.debug.startDebugging(folder(), {
-      name: 'minuet integration',
-      type: 'node',
-      request: 'launch',
-      runtimeArgs: ['--test'],
-      program: '${workspaceFolder}/test/orders.test.js',
-      skipFiles: ['<node_internals>/**'],
-      console: 'internalConsole',
-    });
-    assert.ok(started, 'debug session started');
+    // The run configuration comes from the tour file.
+    await vscode.commands.executeCommand('minuet.runTour');
+    await waitFor(() => vscode.debug.activeDebugSession, 'Run Tour starts a debug session');
 
     const expectations: Array<[number, Record<string, RegExp>]> = [
       [1, { 'order.couponCode': /^'WELCOME'$/, 'order.items.length': /^2$/ }],
@@ -218,6 +211,15 @@ suite('minuet (integration)', function () {
         assert.ok(orderWatch && orderWatch.variablesReference > 0, 'objects can be expanded');
         const children = await api.stops.variables(stop.generation, orderWatch.variablesReference);
         assert.ok(children.some((v) => v.name === 'couponCode'), 'expanding `order` lists its properties');
+
+        // "Add to Step" from the Variables view: the expression is added and evaluated right away.
+        await vscode.commands.executeCommand('minuet.addVariableToStep', { variable: { name: 'id', evaluateName: 'order.id' } });
+        const added = await waitFor(
+          () => api.stops.current?.watches?.find((w) => w.expression === 'order.id'),
+          'the variable is evaluated in the step',
+        );
+        assert.strictEqual(added.value, "'A-1001'");
+        await api.store.update(step(1).id, { watches: step(1).watches.filter((w) => w !== 'order.id') });
       }
 
       const generation = stop.generation;
@@ -423,6 +425,23 @@ suite('minuet (tour files)', function () {
     for (const source of images) {
       assert.ok(source === "'self'" || source === 'data:' || /vscode-(cdn|resource)/.test(source), `no images from the network (${source})`);
     }
+  });
+
+  test('clicking the open tour shows its context in Current Step', async () => {
+    await vscode.commands.executeCommand('minuet.openTour', testTourUri());
+    const state = await waitFor(
+      () => (api.currentStepView.state?.context ? api.currentStepView.state : undefined),
+      'Current Step shows the tour context',
+    );
+    assert.strictEqual(state.step, undefined);
+    assert.strictEqual(state.context?.title, 'Order notification, revised');
+    assert.strictEqual(state.context?.contentFile, 'context.md');
+    assert.match(state.context?.contentHtml ?? '', /Starting point/);
+
+    const first = api.store.all()[0];
+    await vscode.commands.executeCommand('minuet.focusStep', first.id);
+    await waitFor(() => api.currentStepView.state?.step?.id === first.id, 'selecting a step leaves the context');
+    assert.strictEqual(api.currentStepView.state?.context, undefined);
   });
 
   test('a markdown file is rendered, and edits to it show up', async () => {

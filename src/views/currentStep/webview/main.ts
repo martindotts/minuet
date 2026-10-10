@@ -1,5 +1,5 @@
 /// <reference lib="dom" />
-import { FromWebview, StepViewState, ToWebview, ValueView, VariableView } from '../protocol';
+import { ContentInfo, FromWebview, StepViewState, ToWebview, ValueView, VariableView } from '../protocol';
 
 interface VsCodeApi {
   postMessage(message: FromWebview): void;
@@ -348,32 +348,55 @@ function renderContent(s: StepViewState): HTMLElement {
     return renderEditor();
   }
   const step = s.step!;
+  return renderContentBody(step, () => post({ type: 'openContentFile', id: step.id }));
+}
+
+/** The content of a step or of the tour context: markdown, or an HTML page drawn isolated. */
+function renderContentBody(info: ContentInfo, openFile: () => void): HTMLElement {
   const content = el('div', { className: 'comment' });
-  const openFile = (): HTMLElement => {
-    const link = el('a', { text: step.contentFile ?? '', title: 'Open the file in the editor' });
+  const fileLink = (): HTMLElement => {
+    const link = el('a', { text: info.contentFile ?? '', title: 'Open the file in the editor' });
     link.href = '#';
     link.addEventListener('click', (e) => {
       e.preventDefault();
-      post({ type: 'openContentFile', id: step.id });
+      openFile();
     });
     return link;
   };
-  if (step.contentError) {
-    content.append(el('p', { className: 'error', text: step.contentError }));
-  } else if (step.contentPage) {
-    content.append(renderPage(step.contentHtml, step.contentBase), el('p', { className: 'muted source' }, 'From ', openFile()));
-  } else if (step.contentHtml) {
+  if (info.contentError) {
+    content.append(el('p', { className: 'error', text: info.contentError }));
+  } else if (info.contentPage) {
+    content.append(renderPage(info.contentHtml, info.contentBase), el('p', { className: 'muted source' }, 'From ', fileLink()));
+  } else if (info.contentHtml) {
     // Rendered by VS Code's markdown engine; the CSP blocks any script inside it.
-    content.innerHTML = step.contentHtml;
+    content.innerHTML = info.contentHtml;
     sanitize(content);
-    resolveUrls(content, step.contentBase);
-    if (step.contentFile) {
-      content.append(el('p', { className: 'muted source' }, 'From ', openFile()));
+    resolveUrls(content, info.contentBase);
+    if (info.contentFile) {
+      content.append(el('p', { className: 'muted source' }, 'From ', fileLink()));
     }
   } else {
     content.append(el('p', { className: 'muted', text: 'No content.' }));
   }
   return content;
+}
+
+/** The tour context: what the tour is about, before its first step. */
+function renderContext(s: StepViewState): HTMLElement[] {
+  const context = s.context!;
+  const position = el('span', { className: 'position', text: `${context.steps} ${context.steps === 1 ? 'step' : 'steps'}` });
+  const start = button('▶', 'Go to the first step', () => post({ type: 'next' }));
+  start.disabled = !s.navEnabled || context.steps === 0;
+  const titleRow = el(
+    'div',
+    { className: 'title-row' },
+    el('h2', { text: context.title }),
+    button('⤢', 'Open the context in a tab', () => post({ type: 'openContextPage' })),
+  );
+  return [
+    el('header', {}, el('div', { className: 'nav' }, position, start), titleRow),
+    renderContentBody(context, () => post({ type: 'openContextFile' })),
+  ];
 }
 
 function renderHighlights(s: StepViewState): HTMLElement {
@@ -482,6 +505,10 @@ function renderView(): void {
   root.replaceChildren();
   const s = state;
   if (!s) {
+    return;
+  }
+  if (!s.step && s.context) {
+    root.append(...renderContext(s));
     return;
   }
   if (!s.step) {

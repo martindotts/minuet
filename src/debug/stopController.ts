@@ -406,7 +406,7 @@ export class StopController implements vscode.Disposable {
     if (evaluated && evaluated.join('\n') !== step.watches.join('\n')) {
       void this.reevaluate();
     } else {
-      // Title, comment or highlights may have changed; let views refresh.
+      // Title, content or highlights may have changed; let views refresh.
       this.changeEmitter.fire(this.active);
     }
   }

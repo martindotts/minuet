@@ -169,18 +169,11 @@ async function addStep(services: Services, arg: unknown): Promise<void> {
 
   const title = await vscode.window.showInputBox({
     title: `Add a step on line ${toOneBased(target.line)}`,
-    prompt: 'Short title for the step',
+    prompt: 'Short title for the step. Its content is written afterwards, with ✎.',
     placeHolder: 'e.g. The notification text is built',
     validateInput: (v) => (v.trim() ? undefined : 'The title cannot be empty.'),
   });
   if (title === undefined) {
-    return;
-  }
-  const content = await vscode.window.showInputBox({
-    title: `Add a step on line ${toOneBased(target.line)}`,
-    prompt: 'Content in markdown (optional; it can be edited later in the Current Step view)',
-  });
-  if (content === undefined) {
     return;
   }
 
@@ -194,7 +187,7 @@ async function addStep(services: Services, arg: unknown): Promise<void> {
     anchorText: lineText.trim(),
     order: store.nextOrder(),
     title: title.trim(),
-    content,
+    content: '',
     highlights: [],
     watches: [],
   };
@@ -506,14 +499,37 @@ async function suggestExecutionOrder(services: Services, hits: string[]): Promis
   }
 }
 
-/** Shows the open tour's context in the Step Page tab. Returns false when the tour has none. */
-async function showContext(store: StepStore, page: StepPage): Promise<boolean> {
-  const context = store.getMeta().context;
-  if (!isFileContent(context) && !context.trim()) {
-    return false;
+/** Runs the open tour's flow under the debugger, with the `run` configuration of its file. */
+async function runTour(store: StepStore, tours: Tours): Promise<void> {
+  const file = tours.activeFile;
+  if (!file) {
+    void vscode.window.showInformationMessage('No tour is open.');
+    return;
   }
-  await page.showContext();
-  return true;
+  const meta = store.getMeta();
+  if (meta.run === undefined) {
+    const open = 'Open Tour File';
+    const choice = await vscode.window.showInformationMessage(
+      'This tour does not say how to run it. Add "run" to its tour.json: a debug configuration, or the name of one in launch.json.',
+      open,
+    );
+    if (choice === open) {
+      await vscode.window.showTextDocument(file);
+    }
+    return;
+  }
+  const folder = vscode.workspace.getWorkspaceFolder(file) ?? vscode.workspace.workspaceFolders?.[0];
+  const config = typeof meta.run === 'string' ? meta.run : { name: `minuet: ${meta.title || 'tour'}`, ...meta.run };
+  if (!(await vscode.debug.startDebugging(folder, config))) {
+    void vscode.window.showErrorMessage('The tour could not be started. Check its "run" configuration in tour.json.');
+  }
+}
+
+/** Shows the open tour's context in Current Step. */
+async function showContext(services: Services): Promise<void> {
+  if (services.tours.activeFile) {
+    await services.currentStepView.showContext();
+  }
 }
 
 export function registerCommands(services: Services): vscode.Disposable[] {
@@ -534,7 +550,7 @@ export function registerCommands(services: Services): vscode.Disposable[] {
       const uri = await tourFromArg(services.tours, arg, 'Open the tour…');
       // Opening a tour (or clicking the open one) shows its context.
       if (uri && (await services.tours.open(uri))) {
-        await showContext(store, services.page);
+        await showContext(services);
       }
     }),
     register('closeTour', async () => {
@@ -573,7 +589,17 @@ export function registerCommands(services: Services): vscode.Disposable[] {
         await vscode.commands.executeCommand(`${CURRENT_STEP_VIEW_ID}.focus`);
       }
     }),
-    register('showContext', () => showContext(store, services.page)),
+    register('runTour', () => runTour(store, services.tours)),
+    // From the debugger's Variables view: adds the variable to the step where execution is stopped.
+    register('addVariableToStep', async (arg) => {
+      const step = stops.current ? store.get(stops.current.stepId) : undefined;
+      const variable = (arg as { variable?: { name?: string; evaluateName?: string } } | undefined)?.variable;
+      const expression = (variable?.evaluateName ?? variable?.name)?.trim();
+      if (step && expression && !step.watches.includes(expression)) {
+        await store.update(step.id, { watches: [...step.watches, expression] });
+      }
+    }),
+    register('showContext', () => showContext(services)),
     register('installAgentSkill', () => installAgentSkill(services.extensionUri)),
   ];
 }

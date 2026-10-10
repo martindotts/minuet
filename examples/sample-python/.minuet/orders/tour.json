@@ -2,6 +2,14 @@
   "version": 1,
   "title": "How the order notification text is built (Python)",
   "context": "## Starting point\n\nThe test `test_orders.py` calls `build_order_notification` with an order of **2 products** and the coupon `WELCOME`.\n\nWe want to see, with real values, where each part of the text comes from: the subtotal, the coupon discount, the amount formatting and the final `body`.",
+  "run": {
+    "type": "debugpy",
+    "request": "launch",
+    "program": "${workspaceFolder}/test_orders.py",
+    "cwd": "${workspaceFolder}",
+    "console": "integratedTerminal",
+    "justMyCode": true
+  },
   "steps": [
     {
       "order": 1,
@@ -10,8 +18,18 @@
       "anchorText": "lines, subtotal = calculate_subtotal(order[\"items\"])",
       "title": "Entry: the order arrives",
       "content": "`build_order_notification` receives the whole order. Look at `coupon_code`: it decides whether \"you saved\" shows up later.",
-      "highlights": [{ "startLine": 26, "endLine": 34, "note": "the whole notification is built here" }],
-      "watches": ["order", "order['coupon_code']", "len(order['items'])"]
+      "highlights": [
+        {
+          "startLine": 26,
+          "endLine": 34,
+          "note": "the whole notification is built here"
+        }
+      ],
+      "watches": [
+        "order",
+        "order['coupon_code']",
+        "len(order['items'])"
+      ]
     },
     {
       "order": 2,
@@ -20,8 +38,17 @@
       "anchorText": "return lines, subtotal",
       "title": "Subtotal per line",
       "content": "Each item becomes a line with `total = unit_price × quantity`. The subtotal does **not** include the discount yet.",
-      "highlights": [{ "startLine": 8, "endLine": 11, "note": "price × quantity per item" }],
-      "watches": ["lines", "subtotal"]
+      "highlights": [
+        {
+          "startLine": 8,
+          "endLine": 11,
+          "note": "price × quantity per item"
+        }
+      ],
+      "watches": [
+        "lines",
+        "subtotal"
+      ]
     },
     {
       "order": 3,
@@ -30,8 +57,18 @@
       "anchorText": "discount = round(subtotal * rate)",
       "title": "Coupon discount",
       "content": "The rate comes from the `DISCOUNTS` table. An unknown (or missing) coupon gives a rate of `0`.",
-      "highlights": [{ "startLine": 1, "endLine": 4, "note": "coupon table" }],
-      "watches": ["coupon_code", "rate", "subtotal * rate"]
+      "highlights": [
+        {
+          "startLine": 1,
+          "endLine": 4,
+          "note": "coupon table"
+        }
+      ],
+      "watches": [
+        "coupon_code",
+        "rate",
+        "subtotal * rate"
+      ]
     },
     {
       "order": 4,
@@ -40,7 +77,9 @@
       "anchorText": "discount_text = f\" (you saved {format_amount(discount)})\" if discount > 0 else \"\"",
       "title": "Amount formatted",
       "content": "The total after the discount, as text.",
-      "watches": ["amount_text"]
+      "watches": [
+        "amount_text"
+      ]
     },
     {
       "order": 5,
@@ -49,8 +88,16 @@
       "anchorText": "return {",
       "title": "The text is assembled",
       "content": "The final `body` joins the customer name, the number of lines, the amount and the discount text.",
-      "highlights": [{ "startLine": 31, "endLine": 34 }],
-      "watches": ["order['customer']['name']", "discount_text"]
+      "highlights": [
+        {
+          "startLine": 31,
+          "endLine": 34
+        }
+      ],
+      "watches": [
+        "order['customer']['name']",
+        "discount_text"
+      ]
     }
   ]
 }

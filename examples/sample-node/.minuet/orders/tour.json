@@ -4,6 +4,18 @@
   "context": {
     "file": "context.md"
   },
+  "run": {
+    "type": "node",
+    "request": "launch",
+    "runtimeArgs": [
+      "--test"
+    ],
+    "program": "${workspaceFolder}/test/orders.test.js",
+    "skipFiles": [
+      "<node_internals>/**"
+    ],
+    "console": "integratedTerminal"
+  },
   "steps": [
     {
       "order": 1,

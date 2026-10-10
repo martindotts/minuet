@@ -45,7 +45,8 @@
 
    > Explain with minuet how the order confirmation email is built
 
-4. **Run it.** Accept opening the tour and start the test the agent picked in the debugger. Each stop shows the step,
+4. **Run it.** Accept opening the tour and click ▶ on it in **Tours**: it runs the test the agent picked in the
+   debugger. Each stop shows the step,
    its explanation and the real values.
 
 ## Why minuet
@@ -142,11 +143,13 @@ All commands are in the Command Palette (**minuet: …**). They are also in the 
 
 | Command | What it does |
 | --- | --- |
-| **Add Step on This Line** | Creates a breakpoint on the cursor line if there is none. Asks for a title and its content. If no tour is open, asks which one to add the step to, or creates a new one. |
+| **Add Step on This Line** | Creates a breakpoint on the cursor line if there is none. Asks for its title (the content is written afterwards, with ✎). If no tour is open, asks which one to add the step to, or creates a new one. |
 | **Highlight Selection in Step…** | Adds the selected lines to a step in the same file. Suggests the nearest one above by default. Asks for an optional note. |
 | **Add Expression to Evaluate…** | Adds an expression to the step. If text is selected, it is used as the initial value. |
 | **Edit Step** | Changes the title, content, order, expressions or highlights. If the step is outdated, it can be re-anchored. |
 | **Delete Step** | Deletes the step. The breakpoint is kept. |
+| **Run Tour** | Runs the open tour's flow under the debugger, with the `run` configuration of its file (the ▶ on the tour). |
+| **Add to Step** | In the debugger's **Variables** view, while stopped at a step: adds the variable to the step's expressions. |
 | **Order Steps by Last Run** | Renumbers the tour following the order in which the last run stopped at each step. Steps that did not run go to the end. Shows the new order before applying it. |
 | **New Tour…** | Asks for a title and creates `.minuet/<title>/tour.json`, empty, and opens it. |
 | **Open Tour…** | Opens a tour of the tours folder (also by clicking it in **Tours**, or right-clicking a `tour.json` in the Explorer). A tour from elsewhere is copied into the folder first, with its files. |
@@ -158,27 +161,35 @@ All commands are in the Command Palette (**minuet: …**). They are also in the 
 ### In the code
 
 A CodeLens appears above the line of each step: `◆ Step 3 of 6 · title` (with ⚠ if it is outdated). Clicking it
-shows the step in **Current Step**, inside Run and Debug. When you go back to **Tour**, that step is selected.
+shows the step in **Current Step** and selects it in **Tours**.
 Placing the cursor on the line of a step also selects it (turn it off with `minuet.followCursor`).
 
 ### The minuet panel
 
-The panel has its own icon in the Activity Bar, with the **Tours** of the tours folder. The list follows the
-folder: a tour copied there, committed by a teammate or written by an agent shows up by itself.
+The panel has its own icon in the Activity Bar. Everything is there: **Tours** at the top and **Current Step**
+below it. The list of tours follows the folder: a tour copied there, committed by a teammate or written by an
+agent shows up by itself.
 
 - **Click a tour** to open it: the current one is closed first, and the new one expands into its steps and
-  shows its context in the Step Page tab. Clicking the open tour shows its context again.
+  shows its context in Current Step. Clicking the open tour shows its context again.
+- **▶ runs the tour**: it starts the debugger with the `run` configuration of the tour file. It shows up when
+  the tour has one.
 - **The open tour's steps**, in order: `1. title  file:line`, with ⚠ on **outdated** steps and, during a
   session, a marker on the step where execution is **stopped**. Clicking a step opens the file at that line
-  and shows it in Current Step. Step actions: move up, move down, edit and delete.
+  and shows the step in Current Step. Step actions: move up, move down, edit and delete.
 - **Tour actions**: ✕ closes the open tour; the context menu opens its file or deletes it. The `…` menu of the
   panel closes the tour, opens its file, orders the steps by execution and installs the agent skill.
 
 ### The "Current Step" view
 
-It lives in **Run and Debug**, next to Variables, Watch and Call Stack, so it stays visible when VS Code opens
-Run and Debug at every stop. It shows the step where execution is stopped or, when there is no stop, the
-selected step. It contains:
+It lives in minuet's panel, below **Tours**. It shows the step where execution is stopped or, when there is no
+stop, the selected step (or the tour's context, after clicking the tour).
+
+When a debug session starts, VS Code switches the sidebar to Run and Debug. While a tour is open, minuet
+switches it back right away, so the step and its values stay in view; the focus stays where it was. Variables
+and Call Stack are one click away, in Run and Debug.
+
+It contains:
 
 - **Header:** "Step 3 of 6" and the title.
   - Without a debug session, the ◀ ▶ buttons browse the tour so you can read it. They do not run code.
@@ -190,7 +201,8 @@ selected step. It contains:
 - **Expressions** as a tree: each one with its value, colored by type.
   - Objects expand on click and their children are loaded on demand, with no depth limit.
   - Hovering a row shows buttons to copy the value or remove the expression.
-  - A field at the bottom adds a new expression.
+  - A field at the bottom adds a new expression. While stopped, **Add to Step** in the Variables view (right
+    click) adds a variable.
   - When execution is not stopped at the step, the expressions are listed without values.
 - **Highlights:** each range (`L9–13`) with its note.
   - Click a range to select and reveal it in the editor.
@@ -332,6 +344,7 @@ This is the contract agents use.
   "version": 1,
   "title": "How the order confirmation email is built",
   "context": "markdown with the starting point (optional)",
+  "run": { "type": "node", "request": "launch", "program": "${workspaceFolder}/test/orders.test.js" },
   "steps": [
     {
       "order": 1,
@@ -354,6 +367,7 @@ Root:
 | `version` | `1` | yes | Format version. |
 | `title` | string | no | Tour title. Shown in the panel. |
 | `context` | markdown or `{ "file" }` | no | Starting point, shown when the tour is opened. See [Step content](#step-content). |
+| `run` | debug configuration or string | no | How to run the flow: a debug configuration (the same object as in `launch.json`) or the name of one. Shows ▶ on the tour. |
 | `steps` | list | yes | At least one step. |
 
 Each step:
@@ -445,7 +459,7 @@ an HTML page with a table and an SVG diagram.
 
 1. Press **F5** in this project and pick **Node.js**. A development window opens with the sample.
 2. **Tours** → click *How the order notification text is built*.
-3. **Run and Debug** → *Debug: orders test*.
+3. Click ▶ on the tour (it runs `node --test` under the debugger).
 4. Execution stops at each step. **Continue** (F5) moves to the next one.
 
 `examples/sample-python` has the same flow in Python (`orders.py`, a `unittest` test and its tour). To try it,
@@ -492,6 +506,7 @@ tested on its own; the other layers adapt it to VS Code.
 | **`src/views/`** | **What the user sees.** |
 | `views/toursView.ts` | "Tours" view: the tours, and the open one's steps. |
 | `views/currentStep/` | "Current Step" view: provider, state, message protocol and webview script. |
+| `views/stayInMinuet.ts` | Keeps minuet's panel in view when a debug session starts. |
 | `views/stepPage.ts` | "Step Page" tab: a step's content in an editor tab. |
 | `views/decorations.ts`, `views/codeLens.ts` | Highlights, notes and the CodeLens of each step. |
 | `views/selection.ts`, `views/navigation.ts` | Selected step, and opening a step in the editor. |

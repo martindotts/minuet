@@ -22,11 +22,8 @@ export interface HighlightView {
   note?: string;
 }
 
-export interface StepInfo {
-  id: string;
-  order: number;
-  total: number;
-  title: string;
+/** What a step or the tour context explains, ready to draw. */
+export interface ContentInfo {
   /** The inline markdown, for editing; undefined when the content comes from a file. */
   contentText?: string;
   /** Rendered markdown (inline or from a .md file), or the HTML of a page as written in its file. */
@@ -39,6 +36,13 @@ export interface StepInfo {
   contentPage: boolean;
   /** The content file could not be read. */
   contentError?: string;
+}
+
+export interface StepInfo extends ContentInfo {
+  id: string;
+  order: number;
+  total: number;
+  title: string;
   stale: boolean;
   anchorText: string;
   highlights: HighlightView[];
@@ -51,10 +55,18 @@ export type WatchStatus =
   | 'evaluating'
   | 'values';
 
+/** The open tour's context, shown when the tour is clicked. */
+export interface ContextInfo extends ContentInfo {
+  title: string;
+  steps: number;
+}
+
 export interface StepViewState {
   /** No steps in the workspace at all. */
   empty: boolean;
   step?: StepInfo;
+  /** Shown instead of a step. */
+  context?: ContextInfo;
   hasPrev: boolean;
   hasNext: boolean;
   /** Prev/next only browse the tour; hidden while a debug session is running (use the native controls). */
@@ -83,6 +95,9 @@ export type FromWebview =
   | { type: 'openPage'; id: string }
   /** Opens the step's content file in the editor. */
   | { type: 'openContentFile'; id: string }
+  /** The same two, for the tour context. */
+  | { type: 'openContextPage' }
+  | { type: 'openContextFile' }
   | { type: 'addWatch'; id: string; expression: string }
   | { type: 'removeWatch'; id: string; expression: string }
   | { type: 'revealHighlight'; id: string; index: number }

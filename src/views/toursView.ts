@@ -86,6 +86,14 @@ export class ToursView implements vscode.TreeDataProvider<TourNode>, vscode.Disp
     this.changeEmitter.fire(undefined);
   }
 
+  /** Brings minuet's sidebar back to the open tour, without taking the focus from the editor. */
+  showOpenTour(): void {
+    const node = this.openTourNode();
+    if (node) {
+      void this.treeView.reveal(node, { select: false, focus: false }).then(undefined, () => undefined);
+    }
+  }
+
   private openTourNode(): TourNode | undefined {
     const tour = this.tours.list.find((t) => this.tours.isOpen(t.uri));
     return tour ? { kind: 'tour', tour } : undefined;
@@ -146,7 +154,8 @@ export class ToursView implements vscode.TreeDataProvider<TourNode>, vscode.Disp
       return item;
     }
     item.description = open ? undefined : `${tour.steps} steps`;
-    item.contextValue = open ? 'tour.open' : 'tour';
+    // `tour.open.runnable`: the open tour says how to run it (its ▶ button).
+    item.contextValue = open ? (this.store.getMeta().run !== undefined ? 'tour.open.runnable' : 'tour.open') : 'tour';
     item.iconPath = new vscode.ThemeIcon(open ? 'book' : 'debug-breakpoint-log-unverified');
     item.tooltip = `${tour.title}\n${file}${open ? '\nOpen: click to read its context.' : `\n${tour.steps} steps. Click to open it.`}`;
     item.command = { command: 'minuet.openTour', title: 'Open Tour', arguments: [tour.uri] };

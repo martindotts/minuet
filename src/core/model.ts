@@ -45,10 +45,17 @@ export interface Step {
   watches: string[];
 }
 
+/**
+ * How to run the flow of a tour under the debugger: a debug configuration (the same object as in
+ * launch.json), or the name of a configuration of the workspace.
+ */
+export type RunConfig = string | { type: string; request: string; [key: string]: unknown };
+
 /** Tour-level data that is not attached to a single breakpoint. */
 export interface TourMeta {
   title: string;
   context: Content;
+  run?: RunConfig;
 }
 
 export const EMPTY_META: TourMeta = { title: '', context: '' };

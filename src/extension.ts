@@ -11,6 +11,7 @@ import { CurrentStepView } from './views/currentStep/currentStepView';
 import { StepDecorations } from './views/decorations';
 import { StepSelection } from './views/selection';
 import { StepPage } from './views/stepPage';
+import { stayInMinuet } from './views/stayInMinuet';
 import { ToursView } from './views/toursView';
 
 /** Returned from activate(); used by the integration tests. */
@@ -54,6 +55,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<Minuet
     currentStepView,
     codeLens,
     vscode.window.registerUriHandler(new MinuetUriHandler(tours)),
+    stops.onDidChange((stop) => void vscode.commands.executeCommand('setContext', 'minuet.stoppedAtStep', stop !== undefined)),
+    stayInMinuet(tours, stops, toursView),
     ...registerCommands({ extensionUri: context.extensionUri, store, staleTracker, stops, selection, currentStepView, tours, page }),
   );
 

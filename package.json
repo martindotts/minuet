@@ -115,6 +115,12 @@
         "icon": "$(folder-opened)"
       },
       {
+        "command": "minuet.runTour",
+        "title": "Run Tour",
+        "category": "minuet",
+        "icon": "$(play)"
+      },
+      {
         "command": "minuet.closeTour",
         "title": "Close Tour",
         "category": "minuet",
@@ -164,6 +170,11 @@
         "command": "minuet.showContext",
         "title": "Show Tour Context",
         "category": "minuet"
+      },
+      {
+        "command": "minuet.addVariableToStep",
+        "title": "Add to Step",
+        "category": "minuet"
       }
     ],
     "submenus": [
@@ -197,6 +208,14 @@
         {
           "command": "minuet.focusStep",
           "when": "false"
+        },
+        {
+          "command": "minuet.addVariableToStep",
+          "when": "false"
+        },
+        {
+          "command": "minuet.runTour",
+          "when": "minuet.hasTour"
         }
       ],
       "editor/context": [
@@ -292,6 +311,11 @@
       ],
       "view/item/context": [
         {
+          "command": "minuet.runTour",
+          "group": "inline@0",
+          "when": "view == minuet.tours && viewItem == tour.open.runnable"
+        },
+        {
           "command": "minuet.moveUp",
           "group": "inline@1",
           "when": "view == minuet.tours && viewItem == step"
@@ -339,7 +363,7 @@
         {
           "command": "minuet.closeTour",
           "group": "inline@1",
-          "when": "view == minuet.tours && viewItem == tour.open"
+          "when": "view == minuet.tours && viewItem =~ /^tour\\.open/"
         },
         {
           "command": "minuet.openTourFile",
@@ -349,12 +373,19 @@
         {
           "command": "minuet.closeTour",
           "group": "2_tour@1",
-          "when": "view == minuet.tours && viewItem == tour.open"
+          "when": "view == minuet.tours && viewItem =~ /^tour\\.open/"
         },
         {
           "command": "minuet.deleteTour",
           "group": "3_delete@1",
           "when": "view == minuet.tours && viewItem =~ /^tour/"
+        }
+      ],
+      "debug/variables/context": [
+        {
+          "command": "minuet.addVariableToStep",
+          "group": "minuet@1",
+          "when": "minuet.stoppedAtStep"
         }
       ]
     },
@@ -374,9 +405,7 @@
           "name": "Tours",
           "icon": "media/tour.svg",
           "contextualTitle": "minuet"
-        }
-      ],
-      "debug": [
+        },
         {
           "type": "webview",
           "id": "minuet.currentStep",

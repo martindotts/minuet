@@ -29,6 +29,8 @@ export class CurrentStepView implements vscode.WebviewViewProvider, vscode.Dispo
   private lastState: StepViewState | undefined;
   private lastRendered: Extract<FromWebview, { type: 'rendered' }> | undefined;
   private readonly renderErrors: string[] = [];
+  /** The tour was clicked: show its context until a step is selected or execution stops. */
+  private showingContext = false;
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -44,8 +46,23 @@ export class CurrentStepView implements vscode.WebviewViewProvider, vscode.Dispo
       tours.onDidChangeContent(() => void this.refresh()),
       store.onDidChange(() => void this.refresh()),
       staleTracker.onDidChange(() => void this.refresh()),
-      stops.onDidChange(() => void this.refresh()),
-      selection.onDidChange(() => void this.refresh()),
+      stops.onDidChange((stop) => {
+        if (stop) {
+          this.showingContext = false;
+        }
+        void this.refresh();
+      }),
+      selection.onDidChange(({ id }) => {
+        if (id) {
+          this.showingContext = false;
+        }
+        void this.refresh();
+      }),
+      tours.onDidChange(() => {
+        if (!tours.activeFile) {
+          this.showingContext = false;
+        }
+      }),
       vscode.debug.onDidStartDebugSession(() => void this.refresh()),
       vscode.debug.onDidTerminateDebugSession(() => void this.refresh()),
       vscode.debug.onDidChangeActiveDebugSession(() => void this.refresh()),
@@ -86,6 +103,14 @@ export class CurrentStepView implements vscode.WebviewViewProvider, vscode.Dispo
     });
   }
 
+  /** Shows the open tour's context (until a step is selected or execution stops at one). */
+  async showContext(): Promise<void> {
+    this.showingContext = true;
+    this.selection.select(undefined);
+    await vscode.commands.executeCommand(`${CURRENT_STEP_VIEW_ID}.focus`);
+    await this.refresh();
+  }
+
   /** Shows a step and switches its content to edit mode. */
   async edit(id: string): Promise<void> {
     this.selection.select(id);
@@ -100,7 +125,13 @@ export class CurrentStepView implements vscode.WebviewViewProvider, vscode.Dispo
     const seq = ++this.renderSeq;
     const stop = this.stops.current;
     const shown = this.store.get(stop?.stepId ?? this.selection.selectedId ?? '');
-    const content = shown ? await this.renderContent(shown.content) : { html: '', page: false };
+    const meta = this.store.getMeta();
+    const context = !shown && this.showingContext && this.tours.activeFile ? meta.context : undefined;
+    const content = shown
+      ? await this.renderContent(shown.content)
+      : context !== undefined
+        ? await this.renderContent(context)
+        : { html: '', page: false };
     if (seq !== this.renderSeq) {
       return;
     }
@@ -112,6 +143,18 @@ export class CurrentStepView implements vscode.WebviewViewProvider, vscode.Dispo
       isStale: (id) => this.staleTracker.isStale(id),
       content,
     });
+    if (context !== undefined) {
+      state.context = {
+        title: meta.title || 'Tour',
+        steps: this.store.count(),
+        contentText: isFileContent(context) ? undefined : context,
+        contentHtml: content.html,
+        contentBase: content.base,
+        contentFile: content.file,
+        contentPage: content.page,
+        contentError: content.error,
+      };
+    }
     this.lastState = state;
     if (this.view && this.ready) {
       await this.post({ type: 'state', state });
@@ -195,10 +238,15 @@ export class CurrentStepView implements vscode.WebviewViewProvider, vscode.Dispo
       case 'prev':
       case 'next': {
         const current = this.shownStep();
-        if (!current || !this.lastState?.navEnabled) {
+        if (!this.lastState?.navEnabled) {
           return;
         }
-        const id = neighbourId(this.store.all(), current.id, message.type === 'prev' ? -1 : 1);
+        // From the tour context, ▶ starts with the first step.
+        const id = current
+          ? neighbourId(this.store.all(), current.id, message.type === 'prev' ? -1 : 1)
+          : this.lastState.context && message.type === 'next'
+            ? this.store.all()[0]?.id
+            : undefined;
         const target = id ? this.store.get(id) : undefined;
         if (target) {
           this.selection.select(target.id);
@@ -228,6 +276,21 @@ export class CurrentStepView implements vscode.WebviewViewProvider, vscode.Dispo
       case 'openPage':
         await this.page.showStep(message.id);
         return;
+      case 'openContextPage':
+        await this.page.showContext();
+        return;
+      case 'openContextFile': {
+        const context = this.store.getMeta().context;
+        if (isFileContent(context)) {
+          const resolved = this.tours.resolveContentFile(context.file);
+          if ('uri' in resolved) {
+            await vscode.window.showTextDocument(resolved.uri, { viewColumn: vscode.ViewColumn.Beside });
+          } else {
+            void vscode.window.showWarningMessage(resolved.error);
+          }
+        }
+        return;
+      }
       case 'openContentFile': {
         const step = this.store.get(message.id);
         if (step && isFileContent(step.content)) {

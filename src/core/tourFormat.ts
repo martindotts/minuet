@@ -1,5 +1,5 @@
 import { toOneBased, toZeroBased } from './lines';
-import { Step, CONTENT_FILE_EXTENSIONS, Content, Highlight, TourMeta, sortByOrder } from './model';
+import { Step, CONTENT_FILE_EXTENSIONS, Content, Highlight, RunConfig, TourMeta, sortByOrder } from './model';
 
 /**
  * Tour file format (the contract used by agents). All lines are 1-based.
@@ -27,6 +27,8 @@ export interface TourFile {
   version: 1;
   title: string;
   context: Content;
+  /** Optional: how to run the flow under the debugger. */
+  run?: RunConfig;
   steps: TourFileStep[];
 }
 
@@ -143,6 +145,10 @@ export function validateTour(raw: unknown): ParseResult {
   const contextError = contentError(raw.context);
   if (contextError) {
     fail('context', contextError, raw.context);
+  }
+  const runError = runConfigError(raw.run);
+  if (runError) {
+    fail('run', runError, raw.run);
   }
   if (!Array.isArray(raw.steps)) {
     fail('steps', 'must be a list of steps', raw.steps);
@@ -275,6 +281,7 @@ export function validateTour(raw: unknown): ParseResult {
       version: 1,
       title: (raw.title as string | undefined) ?? '',
       context: toContent(raw.context),
+      ...(raw.run !== undefined ? { run: toRunConfig(raw.run) } : {}),
       steps: [...steps].sort((a, b) => a.order - b.order),
     },
   };
@@ -293,6 +300,21 @@ function contentError(value: unknown): string | undefined {
     return `"file" must be a ${CONTENT_FILE_EXTENSIONS.join(', ')} file`;
   }
   return undefined;
+}
+
+/** Why a `run` value is not valid, or undefined when it is (or is missing). */
+function runConfigError(value: unknown): string | undefined {
+  if (value === undefined || (typeof value === 'string' && value.trim() !== '')) {
+    return undefined;
+  }
+  if (isPlainObject(value) && typeof value.type === 'string' && typeof value.request === 'string') {
+    return undefined;
+  }
+  return 'must be the name of a launch configuration, or a debug configuration with "type" and "request"';
+}
+
+function toRunConfig(value: unknown): RunConfig {
+  return typeof value === 'string' ? value.trim() : (value as RunConfig);
 }
 
 function toContent(value: unknown): Content {
@@ -369,6 +391,7 @@ export function buildTourFile(
     version: 1,
     title: meta.title,
     context: meta.context,
+    ...(meta.run !== undefined ? { run: meta.run } : {}),
     steps: sortByOrder(steps).map((a, i) => ({
       ...stepToFile(a, relativize(a.location.uri)),
       order: i + 1,

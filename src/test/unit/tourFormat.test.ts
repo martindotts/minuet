@@ -279,4 +279,17 @@ suite('tourFormat: conversion', () => {
     }
     assert.deepStrictEqual(parseObject(validTour({ context: { file: 'context.md' } })).ok && 'ok', 'ok');
   });
+
+  test('run is the name of a launch configuration or a debug configuration', () => {
+    const run = (value: unknown) => parseObject(validTour({ run: value }));
+    const ok = run({ type: 'node', request: 'launch', program: 'x.js' });
+    assert.ok(ok.ok && typeof ok.tour.run === 'object' && ok.tour.run.program === 'x.js');
+    const named = run(' Debug: orders test ');
+    assert.ok(named.ok && named.tour.run === 'Debug: orders test');
+    const none = parseObject(validTour({}));
+    assert.ok(none.ok && none.tour.run === undefined, 'run is optional');
+    for (const bad of ['', { type: 'node' }, 3]) {
+      assert.ok(errorsOf(validTour({ run: bad })).some((e) => e.startsWith('run:')), JSON.stringify(bad));
+    }
+  });
 });

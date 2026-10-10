@@ -49,9 +49,9 @@ that the run will be **paused at breakpoints inside VS Code's debugger**, which 
   in mocha, `-p no:timeout` with pytest-timeout); otherwise the runner kills the test while it is paused.
 - **One test, one process.** Run only the chosen test, without parallel workers or sharding, so the debugger
   stops only where it should and does not miss child processes.
-- **VS Code's debugger, not a plain terminal.** Pick what fits the language: a debug terminal (*Debug:
-  JavaScript Debug Terminal* for Node.js), **Debug Test** in the Testing view or in the editor, or a launch
-  configuration in `.vscode/launch.json`.
+- **VS Code's debugger, not a plain terminal.** Write it as the tour's `run`: a debug configuration (the same
+  object as in `.vscode/launch.json`) that runs that one test with the timeout off. The user starts it with ▶
+  on the tour. Check the configuration types the repository already uses in `.vscode/launch.json`.
 - **The language's debug extension installed** in VS Code (Python, Go, Java, C#…). If it is missing, tell the
   user which one to install.
 
@@ -75,6 +75,7 @@ Never overwrite a tour that is already there: they can be the user's or the team
   "version": 1,
   "title": "How the order confirmation email is built",
   "context": "markdown with the starting point: which test or run is used, with which input, and what to look at",
+  "run": { "type": "node", "request": "launch", "program": "${workspaceFolder}/test/orders.test.js" },
   "steps": [
     {
       "order": 1,
@@ -95,6 +96,7 @@ Never overwrite a tour that is already there: they can be the user's or the team
 | `version` | yes | Always `1`. |
 | `title` | no | Text. |
 | `context` | no | Like `content`. Shown first: explain the starting point. |
+| `run` | recommended | How to run the flow under the debugger: a debug configuration, the same object as in `launch.json` (`type`, `request`, `program`/`module`/`args`…), or the name of one in `.vscode/launch.json`. It must run only the chosen test, with no timeout. The user runs it with ▶ on the tour. |
 | `steps[].order` | yes | Integer ≥ 1, no repeats. **Execution order**, not reading order. |
 | `steps[].file` | yes | Path **relative to the folder open in VS Code** (the repository root), with `/`. |
 | `steps[].line` | yes | Line of the breakpoint, **starting at 1**. One step per line. |
@@ -171,12 +173,12 @@ fix or add a step), the tour and the step reload by themselves, with no need to 
 
 A short message with:
 
-- that they should accept opening the tour in VS Code,
-- how to run the test under the debugger in this repository, with the timeout disabled and only that test (the
-  command for a debug terminal, the test to pick in the Testing view, or the launch configuration),
+- that they should accept opening the tour in VS Code and click ▶ on it in **Tours** (it runs the `run`
+  configuration you wrote). If you could not write a `run` configuration, tell them how to run the test under
+  the debugger instead,
 - if it is an existing test, which one and why; if it is temporary, that you created it and where,
 - that they move forward with **F5** (Continue); each step is shown in the **Current Step** view (in Run and
-  Debug),
+  Debug), and they can add a variable to the step from the Variables view (right click → **Add to Step**),
 - that if the steps run in a different order, the extension offers **Order by Execution**.
 
 Do not repeat the content of each step in the chat: it is already in the tour. A one or two line summary of the
