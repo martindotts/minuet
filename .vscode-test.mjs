@@ -3,7 +3,7 @@ import { defineConfig } from '@vscode/test-cli';
 export default defineConfig([
   {
     label: 'js',
-    files: 'out/test/*.test.js',
+    files: ['out/test/unit/**/*.test.js', 'out/test/integration/**/*.test.js'],
     workspaceFolder: './examples/sample-node',
     mocha: { ui: 'tdd', timeout: 20000 },
   },

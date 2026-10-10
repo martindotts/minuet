@@ -1,8 +1,8 @@
 import * as assert from 'assert';
 import { execFileSync } from 'child_process';
 import * as vscode from 'vscode';
+import { Step } from '../../core/model';
 import { MinuetApi } from '../../extension';
-import { Annotation } from '../../model';
 
 // Runs with `npm run test:python`: the workspace is examples/sample-python and the Python debugger
 // extension (debugpy) is installed in the test instance.
@@ -40,7 +40,7 @@ function python(): string {
 suite('minuet (Python, debugpy)', function () {
   this.timeout(120000);
   let api: MinuetApi;
-  const step = (order: number): Annotation => {
+  const step = (order: number): Step => {
     const a = api.store.all().find((x) => x.order === order);
     assert.ok(a, `step ${order} exists`);
     return a;
@@ -91,7 +91,7 @@ suite('minuet (Python, debugpy)', function () {
     for (const [order, expected] of expectations) {
       const id = step(order).id;
       const stop = await waitFor(
-        () => (api.stops.current?.annotationId === id && api.stops.current.watches ? api.stops.current : undefined),
+        () => (api.stops.current?.stepId === id && api.stops.current.watches ? api.stops.current : undefined),
         `stop at step ${order} with evaluated watches`,
         60000,
       );

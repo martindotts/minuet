@@ -39,7 +39,7 @@ async function main() {
   });
   // Script of the "Current Step" webview: runs in the browser sandbox, not in Node.
   const webview = await esbuild.context({
-    entryPoints: ['src/webview/main.ts'],
+    entryPoints: ['src/views/currentStep/webview/main.ts'],
     bundle: true,
     format: 'iife',
     minify: production,

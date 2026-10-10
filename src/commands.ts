@@ -1,30 +1,30 @@
 import { randomUUID } from 'crypto';
 import * as vscode from 'vscode';
-import { installAgentSkill } from './agentSkills';
-import { findBreakpointAt, newBreakpoint } from './breakpointSync';
-import { isInExecutionOrder, orderByExecution } from './executionOrder';
-import { Annotation, contentText, Highlight, isFileContent, sortByOrder } from './model';
-import { toOneBased, toZeroBased } from './lines';
-import { openStep, selectionLines } from './navigation';
-import { StepSelection } from './selection';
-import { readLine, StaleTracker } from './staleTracker';
-import { StepPage } from './stepPage';
-import { STEP_VIEW_ID, StepView } from './stepView';
-import { StopController } from './stopController';
-import { AnnotationStore } from './store';
-import { TourEntry, Tours } from './tours';
-import { TourNode } from './tourView';
+import { installAgentSkill } from './agents/agentSkills';
+import { isInExecutionOrder, orderByExecution } from './core/executionOrder';
+import { toOneBased, toZeroBased } from './core/lines';
+import { Step, contentText, Highlight, isFileContent, sortByOrder } from './core/model';
+import { findBreakpointAt, newBreakpoint } from './debug/breakpointSync';
+import { StopController } from './debug/stopController';
+import { readLine, StaleTracker } from './tours/staleTracker';
+import { StepStore } from './tours/stepStore';
+import { TourEntry, Tours } from './tours/tours';
+import { CURRENT_STEP_VIEW_ID, CurrentStepView } from './views/currentStep/currentStepView';
+import { openStep, selectionLines } from './views/navigation';
+import { StepSelection } from './views/selection';
+import { StepPage } from './views/stepPage';
+import { StepsNode } from './views/stepsView';
 
 export const CONTEXT_SCHEME = 'minuet';
 const CONTEXT_URI = vscode.Uri.from({ scheme: CONTEXT_SCHEME, path: '/Tour context.md' });
 
 interface Services {
   extensionUri: vscode.Uri;
-  store: AnnotationStore;
+  store: StepStore;
   staleTracker: StaleTracker;
   stops: StopController;
   selection: StepSelection;
-  stepView: StepView;
+  currentStepView: CurrentStepView;
   tours: Tours;
   page: StepPage;
 }
@@ -52,8 +52,8 @@ function toUri(uri: LineNumberArg['uri']): vscode.Uri {
   return uri instanceof vscode.Uri ? uri : vscode.Uri.from(uri);
 }
 
-function isStepNode(arg: unknown): arg is Extract<TourNode, { kind: 'step' }> {
-  return typeof arg === 'object' && arg !== null && (arg as TourNode).kind === 'step';
+function isStepNode(arg: unknown): arg is Extract<StepsNode, { kind: 'step' }> {
+  return typeof arg === 'object' && arg !== null && (arg as StepsNode).kind === 'step';
 }
 
 /** Line targeted by a command: gutter menu, editor menu (uri) or the active editor's cursor. */
@@ -71,26 +71,26 @@ function resolveTarget(arg: unknown): Target | undefined {
   return { uri: editor.document.uri, line: editor.selection.active.line };
 }
 
-function stepLabel(a: Annotation): string {
+function stepLabel(a: Step): string {
   return `${a.order}. ${a.title}`;
 }
 
-function stepDescription(a: Annotation): string {
+function stepDescription(a: Step): string {
   return `${vscode.workspace.asRelativePath(vscode.Uri.parse(a.location.uri))}:${toOneBased(a.location.line)}`;
 }
 
-type AnnotationPick = vscode.QuickPickItem & { annotation: Annotation };
+type StepPick = vscode.QuickPickItem & { step: Step };
 
 /**
- * Picks an annotation. The nearest annotation at or above `near` in the same file is offered first;
- * the other annotations of that file follow, then the rest of the tour.
+ * Picks a step. The nearest step at or above `near` in the same file is offered first;
+ * the other steps of that file follow, then the rest of the tour.
  */
-async function pickAnnotation(
-  store: AnnotationStore,
+async function pickStep(
+  store: StepStore,
   placeHolder: string,
   near: Target | undefined,
   options: { sameFileOnly?: boolean } = {},
-): Promise<Annotation | undefined> {
+): Promise<Step | undefined> {
   const all = store.all();
   const uri = near?.uri.toString();
   const sameFile = uri ? all.filter((a) => a.location.uri === uri) : [];
@@ -111,25 +111,25 @@ async function pickAnnotation(
   if (ordered.length === 1) {
     return ordered[0];
   }
-  const items: AnnotationPick[] = ordered.map((a) => ({
+  const items: StepPick[] = ordered.map((a) => ({
     label: stepLabel(a),
     description: stepDescription(a),
     detail: a === nearest ? 'Nearest one above in this file' : undefined,
-    annotation: a,
+    step: a,
   }));
   const picked = await vscode.window.showQuickPick(items, { placeHolder, matchOnDescription: true });
-  return picked?.annotation;
+  return picked?.step;
 }
 
-/** Annotation addressed by a command argument (tree item, comment, gutter, editor) or picked. */
-async function annotationFromArg(
+/** Step addressed by a command argument (tree item, comment, gutter, editor) or picked. */
+async function stepFromArg(
   services: Services,
   arg: unknown,
   placeHolder: string,
-): Promise<Annotation | undefined> {
+): Promise<Step | undefined> {
   const { store } = services;
   if (isStepNode(arg)) {
-    return store.get(arg.annotation.id);
+    return store.get(arg.step.id);
   }
   if (typeof arg === 'string') {
     return store.get(arg);
@@ -142,21 +142,21 @@ async function annotationFromArg(
     }
   }
   if (store.count() === 0) {
-    void vscode.window.showInformationMessage('There are no annotations in this workspace.');
+    void vscode.window.showInformationMessage('There are no steps in this workspace.');
     return undefined;
   }
-  return pickAnnotation(store, placeHolder, target);
+  return pickStep(store, placeHolder, target);
 }
 
-async function annotateLine(services: Services, arg: unknown): Promise<void> {
+async function addStep(services: Services, arg: unknown): Promise<void> {
   const { store, selection } = services;
   const target = resolveTarget(arg);
   if (!target) {
-    void vscode.window.showWarningMessage('Open a file and place the cursor on the line to annotate.');
+    void vscode.window.showWarningMessage('Open a file and place the cursor on the line for the step.');
     return;
   }
   if (target.uri.scheme !== 'file') {
-    void vscode.window.showWarningMessage('Only files saved on disk can be annotated.');
+    void vscode.window.showWarningMessage('Only files saved on disk can have steps.');
     return;
   }
   if (!(await services.tours.ensureOpen())) {
@@ -165,13 +165,13 @@ async function annotateLine(services: Services, arg: unknown): Promise<void> {
   const uri = target.uri.toString();
   const existing = store.findAt(uri, target.line);
   if (existing) {
-    void vscode.window.showInformationMessage(`This line already has an annotation: ${stepLabel(existing)}.`);
-    await editAnnotation(services, existing.id);
+    void vscode.window.showInformationMessage(`This line already has a step: ${stepLabel(existing)}.`);
+    await editStep(services, existing.id);
     return;
   }
 
   const title = await vscode.window.showInputBox({
-    title: `Annotate line ${toOneBased(target.line)}`,
+    title: `Add a step on line ${toOneBased(target.line)}`,
     prompt: 'Short title for the step',
     placeHolder: 'e.g. The notification text is built',
     validateInput: (v) => (v.trim() ? undefined : 'The title cannot be empty.'),
@@ -180,7 +180,7 @@ async function annotateLine(services: Services, arg: unknown): Promise<void> {
     return;
   }
   const content = await vscode.window.showInputBox({
-    title: `Annotate line ${toOneBased(target.line)}`,
+    title: `Add a step on line ${toOneBased(target.line)}`,
     prompt: 'Content in markdown (optional; it can be edited later in the Current Step view)',
   });
   if (content === undefined) {
@@ -190,7 +190,7 @@ async function annotateLine(services: Services, arg: unknown): Promise<void> {
   const lineText = (await readLine(target.uri, target.line)) ?? '';
   const breakpoint = findBreakpointAt(uri, target.line);
   const bp = breakpoint ?? newBreakpoint(uri, target.line);
-  const annotation: Annotation = {
+  const step: Step = {
     id: randomUUID(),
     breakpointId: bp.id,
     location: { uri, line: target.line },
@@ -201,11 +201,11 @@ async function annotateLine(services: Services, arg: unknown): Promise<void> {
     highlights: [],
     watches: [],
   };
-  await store.add(annotation);
+  await store.add(step);
   if (!breakpoint) {
     vscode.debug.addBreakpoints([bp]);
   }
-  selection.select(annotation.id);
+  selection.select(step.id);
 }
 
 async function addHighlight(services: Services): Promise<void> {
@@ -218,22 +218,22 @@ async function addHighlight(services: Services): Promise<void> {
   const uri = editor.document.uri.toString();
   if (store.inFile(uri).length === 0) {
     void vscode.window.showWarningMessage(
-      'There are no annotations in this file. Highlights belong to an annotation in the same file: annotate a breakpoint first.',
+      'There are no steps in this file. Highlights belong to a step in the same file: add a step first.',
     );
     return;
   }
   const { startLine, endLine } = selectionLines(editor.selection);
-  const annotation = await pickAnnotation(
+  const step = await pickStep(
     store,
-    `Highlight lines ${toOneBased(startLine)}–${toOneBased(endLine)} in the annotation…`,
+    `Highlight lines ${toOneBased(startLine)}–${toOneBased(endLine)} in the step…`,
     { uri: editor.document.uri, line: startLine },
     { sameFileOnly: true },
   );
-  if (!annotation) {
+  if (!step) {
     return;
   }
   const note = await vscode.window.showInputBox({
-    title: `Highlight in ${stepLabel(annotation)}`,
+    title: `Highlight in ${stepLabel(step)}`,
     prompt: 'Note for the highlight (optional; press Enter to leave it empty)',
   });
   if (note === undefined) {
@@ -243,31 +243,31 @@ async function addHighlight(services: Services): Promise<void> {
   if (note.trim()) {
     highlight.note = note.trim();
   }
-  await store.update(annotation.id, {
-    highlights: [...annotation.highlights, highlight].sort((a, b) => a.startLine - b.startLine),
+  await store.update(step.id, {
+    highlights: [...step.highlights, highlight].sort((a, b) => a.startLine - b.startLine),
   });
 }
 
 async function addWatch(services: Services, arg: unknown): Promise<void> {
   const { store } = services;
   if (store.count() === 0) {
-    void vscode.window.showWarningMessage('There are no annotations. Annotate a breakpoint first.');
+    void vscode.window.showWarningMessage('There are no steps. Add a step first.');
     return;
   }
   const editor = vscode.window.activeTextEditor;
   const selected = editor && !editor.selection.isEmpty ? editor.document.getText(editor.selection).trim() : '';
-  let annotation: Annotation | undefined;
+  let step: Step | undefined;
   if (isStepNode(arg) || typeof arg === 'string') {
-    annotation = await annotationFromArg(services, arg, '');
+    step = await stepFromArg(services, arg, '');
   } else {
     const target = resolveTarget(arg);
-    annotation = await pickAnnotation(store, 'Add the expression to the annotation…', target);
+    step = await pickStep(store, 'Add the expression to the step…', target);
   }
-  if (!annotation) {
+  if (!step) {
     return;
   }
   const expression = await vscode.window.showInputBox({
-    title: `Expression to evaluate in ${stepLabel(annotation)}`,
+    title: `Expression to evaluate in ${stepLabel(step)}`,
     prompt: 'Evaluated against the current frame every time execution stops at this step',
     value: selected.includes('\n') ? '' : selected,
     placeHolder: 'e.g. event.body.operation',
@@ -275,32 +275,32 @@ async function addWatch(services: Services, arg: unknown): Promise<void> {
       if (!v.trim()) {
         return 'The expression cannot be empty.';
       }
-      return annotation.watches.includes(v.trim()) ? 'That expression is already in the annotation.' : undefined;
+      return step.watches.includes(v.trim()) ? 'That expression is already in the step.' : undefined;
     },
   });
   if (expression === undefined) {
     return;
   }
-  await store.update(annotation.id, { watches: [...annotation.watches, expression.trim()] });
+  await store.update(step.id, { watches: [...step.watches, expression.trim()] });
 }
 
 type EditAction = vscode.QuickPickItem & { action: () => Promise<void> };
 
-async function editAnnotation(services: Services, arg: unknown): Promise<void> {
-  const { store, staleTracker, stepView } = services;
-  const annotation = await annotationFromArg(services, arg, 'Edit the annotation…');
-  if (!annotation) {
+async function editStep(services: Services, arg: unknown): Promise<void> {
+  const { store, staleTracker, currentStepView } = services;
+  const step = await stepFromArg(services, arg, 'Edit the step…');
+  if (!step) {
     return;
   }
-  const id = annotation.id;
+  const id = step.id;
   const actions: EditAction[] = [
     {
       label: '$(edit) Title',
-      description: annotation.title,
+      description: step.title,
       action: async () => {
         const title = await vscode.window.showInputBox({
-          title: `Title of step ${annotation.order}`,
-          value: annotation.title,
+          title: `Title of step ${step.order}`,
+          value: step.title,
           validateInput: (v) => (v.trim() ? undefined : 'The title cannot be empty.'),
         });
         if (title !== undefined) {
@@ -310,18 +310,18 @@ async function editAnnotation(services: Services, arg: unknown): Promise<void> {
     },
     {
       label: '$(markdown) Content',
-      description: isFileContent(annotation.content)
-        ? `In ${annotation.content.file}`
+      description: isFileContent(step.content)
+        ? `In ${step.content.file}`
         : 'Edited as markdown in the Current Step view',
-      action: () => stepView.edit(id),
+      action: () => currentStepView.edit(id),
     },
     {
       label: '$(list-ordered) Order',
-      description: `Step ${annotation.order} of ${store.count()}`,
+      description: `Step ${step.order} of ${store.count()}`,
       action: async () => {
         const value = await vscode.window.showInputBox({
-          title: `New position for "${annotation.title}"`,
-          value: String(annotation.order),
+          title: `New position for "${step.title}"`,
+          value: String(step.order),
           validateInput: (v) => {
             const n = Number(v);
             return Number.isInteger(n) && n >= 1 && n <= store.count()
@@ -346,28 +346,28 @@ async function editAnnotation(services: Services, arg: unknown): Promise<void> {
       action: () => addWatch(services, id),
     },
   ];
-  if (annotation.watches.length > 0) {
+  if (step.watches.length > 0) {
     actions.push({
       label: '$(eye-closed) Remove expressions…',
-      description: annotation.watches.join(', '),
+      description: step.watches.join(', '),
       action: async () => {
         const picked = await vscode.window.showQuickPick(
-          annotation.watches.map((w) => ({ label: w })),
+          step.watches.map((w) => ({ label: w })),
           { canPickMany: true, placeHolder: 'Expressions to remove' },
         );
         if (picked && picked.length > 0) {
           const remove = new Set(picked.map((p) => p.label));
-          await store.update(id, { watches: annotation.watches.filter((w) => !remove.has(w)) });
+          await store.update(id, { watches: step.watches.filter((w) => !remove.has(w)) });
         }
       },
     });
   }
-  if (annotation.highlights.length > 0) {
+  if (step.highlights.length > 0) {
     actions.push({
       label: '$(symbol-color) Remove highlights…',
       action: async () => {
         const picked = await vscode.window.showQuickPick(
-          annotation.highlights.map((h, index) => ({
+          step.highlights.map((h, index) => ({
             label: `Lines ${toOneBased(h.startLine)}–${toOneBased(h.endLine)}`,
             description: h.note,
             index,
@@ -376,7 +376,7 @@ async function editAnnotation(services: Services, arg: unknown): Promise<void> {
         );
         if (picked && picked.length > 0) {
           const remove = new Set(picked.map((p) => p.index));
-          await store.update(id, { highlights: annotation.highlights.filter((_, i) => !remove.has(i)) });
+          await store.update(id, { highlights: step.highlights.filter((_, i) => !remove.has(i)) });
         }
       },
     });
@@ -384,9 +384,9 @@ async function editAnnotation(services: Services, arg: unknown): Promise<void> {
   if (staleTracker.isStale(id)) {
     actions.push({
       label: '$(pinned) Re-anchor to the current text of the line',
-      description: 'Marks the annotation as up to date again',
+      description: 'Marks the step as up to date again',
       action: async () => {
-        const text = await readLine(vscode.Uri.parse(annotation.location.uri), annotation.location.line);
+        const text = await readLine(vscode.Uri.parse(step.location.uri), step.location.line);
         if (text !== undefined) {
           await store.update(id, { anchorText: text.trim() });
         }
@@ -394,25 +394,25 @@ async function editAnnotation(services: Services, arg: unknown): Promise<void> {
     });
   }
   const picked = await vscode.window.showQuickPick(actions, {
-    title: `Edit ${stepLabel(annotation)}`,
+    title: `Edit ${stepLabel(step)}`,
     placeHolder: 'What do you want to change?',
   });
   await picked?.action();
 }
 
-async function deleteAnnotation(services: Services, arg: unknown): Promise<void> {
-  const annotation = await annotationFromArg(services, arg, 'Delete the annotation…');
-  if (!annotation) {
+async function deleteStep(services: Services, arg: unknown): Promise<void> {
+  const step = await stepFromArg(services, arg, 'Delete the step…');
+  if (!step) {
     return;
   }
   const remove = 'Delete';
   const choice = await vscode.window.showWarningMessage(
-    `Delete the annotation "${stepLabel(annotation)}"?`,
+    `Delete the step "${stepLabel(step)}"?`,
     { modal: true, detail: 'The breakpoint is kept.' },
     remove,
   );
   if (choice === remove) {
-    await services.store.remove(annotation.id);
+    await services.store.remove(step.id);
   }
 }
 
@@ -433,13 +433,13 @@ async function tourFromArg(tours: Tours, arg: unknown, placeHolder: string): Pro
 }
 
 async function moveStep(services: Services, arg: unknown, direction: -1 | 1): Promise<void> {
-  const annotation = await annotationFromArg(services, arg, direction < 0 ? 'Move the step up…' : 'Move the step down…');
-  if (annotation) {
-    await services.store.move(annotation.id, direction);
+  const step = await stepFromArg(services, arg, direction < 0 ? 'Move the step up…' : 'Move the step down…');
+  if (step) {
+    await services.store.move(step.id, direction);
   }
 }
 
-function describeHits(store: AnnotationStore, hits: readonly string[]): string {
+function describeHits(store: StepStore, hits: readonly string[]): string {
   return hits
     .map((id) => store.get(id)?.order)
     .filter((order): order is number => order !== undefined)
@@ -452,7 +452,7 @@ async function orderStepsByExecution(services: Services, confirmed = false): Pro
   const hits = stops.lastRunHits;
   if (hits.length === 0) {
     void vscode.window.showInformationMessage(
-      'No run has been recorded yet: debug the program or the test and let it go through the annotated steps.',
+      'No run has been recorded yet: debug the program or the test and let it go through the steps.',
     );
     return;
   }
@@ -462,7 +462,7 @@ async function orderStepsByExecution(services: Services, confirmed = false): Pro
     return;
   }
   if (!confirmed) {
-    const lines = result.annotations.map((a) => {
+    const lines = result.steps.map((a) => {
       const before = store.get(a.id)?.order;
       const skipped = result.notHit.includes(a) ? '  (not executed)' : '';
       return `${a.order}. ${a.title}${before !== a.order ? `  (was ${before})` : ''}${skipped}`;
@@ -477,7 +477,7 @@ async function orderStepsByExecution(services: Services, confirmed = false): Pro
       return;
     }
   }
-  await store.replaceAll(result.annotations);
+  await store.replaceAll(result.steps);
   const notHit = result.notHit.length;
   void vscode.window.showInformationMessage(
     notHit > 0
@@ -509,7 +509,7 @@ async function suggestExecutionOrder(services: Services, hits: string[]): Promis
   }
 }
 
-async function showContext(store: AnnotationStore, page: StepPage): Promise<void> {
+async function showContext(store: StepStore, page: StepPage): Promise<void> {
   const meta = store.getMeta();
   if (isFileContent(meta.context)) {
     await page.showContext();
@@ -526,7 +526,7 @@ async function showContext(store: AnnotationStore, page: StepPage): Promise<void
 }
 
 /** Read-only virtual document with the tour context, used by the markdown preview. */
-export function contextContentProvider(store: AnnotationStore): vscode.TextDocumentContentProvider & vscode.Disposable {
+export function contextContentProvider(store: StepStore): vscode.TextDocumentContentProvider & vscode.Disposable {
   const emitter = new vscode.EventEmitter<vscode.Uri>();
   const subscription = store.onDidChange(() => emitter.fire(CONTEXT_URI));
   return {
@@ -548,11 +548,11 @@ export function registerCommands(services: Services): vscode.Disposable[] {
     vscode.commands.registerCommand(`minuet.${id}`, handler);
 
   return [
-    register('annotateLine', (arg) => annotateLine(services, arg)),
+    register('addStep', (arg) => addStep(services, arg)),
     register('addHighlight', () => addHighlight(services)),
     register('addWatch', (arg) => addWatch(services, arg)),
-    register('editAnnotation', (arg) => editAnnotation(services, arg)),
-    register('deleteAnnotation', (arg) => deleteAnnotation(services, arg)),
+    register('editStep', (arg) => editStep(services, arg)),
+    register('deleteStep', (arg) => deleteStep(services, arg)),
     register('moveUp', (arg) => moveStep(services, arg, -1)),
     register('moveDown', (arg) => moveStep(services, arg, 1)),
     register('newTour', () => services.tours.create()),
@@ -585,17 +585,17 @@ export function registerCommands(services: Services): vscode.Disposable[] {
     register('orderByExecution', () => orderStepsByExecution(services)),
     stops.onDidFinishRun((hits) => void suggestExecutionOrder(services, hits)),
     register('openStep', async (arg) => {
-      const annotation = typeof arg === 'string' ? store.get(arg) : undefined;
-      if (annotation) {
-        selection.select(annotation.id, 'tree');
-        await openStep(annotation);
+      const step = typeof arg === 'string' ? store.get(arg) : undefined;
+      if (step) {
+        selection.select(step.id, 'tree');
+        await openStep(step);
       }
     }),
     register('focusStep', async (arg) => {
-      const annotation = typeof arg === 'string' ? store.get(arg) : undefined;
-      if (annotation) {
-        selection.select(annotation.id, 'lens');
-        await vscode.commands.executeCommand(`${STEP_VIEW_ID}.focus`);
+      const step = typeof arg === 'string' ? store.get(arg) : undefined;
+      if (step) {
+        selection.select(step.id, 'lens');
+        await vscode.commands.executeCommand(`${CURRENT_STEP_VIEW_ID}.focus`);
       }
     }),
     register('showContext', () => showContext(store, services.page)),

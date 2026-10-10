@@ -68,7 +68,7 @@ Each step is a breakpoint with:
 - one or more **highlighted code ranges** (with an optional note),
 - **expressions to evaluate** for that step (for example `event.body.orderId`).
 
-When execution stops at an annotated breakpoint, the extension:
+When execution stops at the breakpoint of a step, the extension:
 
 - highlights the ranges in the code,
 - shows the step in the **Current Step** view: title, content and the real value of each expression, evaluated
@@ -142,11 +142,11 @@ All commands are in the Command Palette (**minuet: …**). They are also in the 
 
 | Command | What it does |
 | --- | --- |
-| **Annotate Breakpoint on This Line** | Creates a breakpoint on the cursor line if there is none. Asks for a title and its content. If no tour is open, asks which one to add the step to, or creates a new one. |
-| **Highlight Selection in Annotation…** | Adds the selected lines to an annotation in the same file. Suggests the nearest one above by default. Asks for an optional note. |
+| **Add Step on This Line** | Creates a breakpoint on the cursor line if there is none. Asks for a title and its content. If no tour is open, asks which one to add the step to, or creates a new one. |
+| **Highlight Selection in Step…** | Adds the selected lines to a step in the same file. Suggests the nearest one above by default. Asks for an optional note. |
 | **Add Expression to Evaluate…** | Adds an expression to the step. If text is selected, it is used as the initial value. |
-| **Edit Annotation** | Changes the title, content, order, expressions or highlights. If the step is outdated, it can be re-anchored. |
-| **Delete Annotation** | Deletes the annotation. The breakpoint is kept. |
+| **Edit Step** | Changes the title, content, order, expressions or highlights. If the step is outdated, it can be re-anchored. |
+| **Delete Step** | Deletes the step. The breakpoint is kept. |
 | **Order Steps by Last Run** | Renumbers the tour following the order in which the last run stopped at each step. Steps that did not run go to the end. Shows the new order before applying it. |
 | **New Tour…** | Asks for a title and creates `.minuet/<title>/tour.json`, empty, and opens it. |
 | **Open Tour…** | Opens a tour of the tours folder (also by clicking it in **Tours**, or right-clicking a `tour.json` in the Explorer). A tour from elsewhere is copied into the folder first, with its files. |
@@ -157,9 +157,9 @@ All commands are in the Command Palette (**minuet: …**). They are also in the 
 
 ### In the code
 
-A CodeLens appears above each annotated line: `◆ Step 3 of 6 · title` (with ⚠ if it is outdated). Clicking it
+A CodeLens appears above the line of each step: `◆ Step 3 of 6 · title` (with ⚠ if it is outdated). Clicking it
 shows the step in **Current Step**, inside Run and Debug. When you go back to **Tour**, that step is selected.
-Placing the cursor on an annotated line also selects its step (turn it off with `minuet.followCursor`).
+Placing the cursor on the line of a step also selects it (turn it off with `minuet.followCursor`).
 
 ### The minuet panel
 
@@ -213,13 +213,13 @@ line highlights. Notes are shown at the end of the first line of the range, afte
 ### While debugging
 
 1. Run the program or the test with the usual debugger of its language.
-2. When execution stops at an annotated breakpoint:
+2. When execution stops at the breakpoint of a step:
    - the step's ranges are highlighted,
    - **Current Step** shows the step and evaluates its expressions with `evaluate` (`watch` context) against the
      current frame. If an expression fails, its error is shown and the others are still evaluated.
 3. When you continue or step, the highlights of the previous step go away and the values are cleared.
-4. If execution stops at a line without an annotation, nothing happens (regular debugging).
-5. Execution follows the code, not the step numbers. If an annotated line calls a function that has another
+4. If execution stops at a line without a step, nothing happens (regular debugging).
+5. Execution follows the code, not the step numbers. If the line of a step calls a function that has another
    step inside, that step runs first. When the session ends, if the steps ran in a different order, the
    extension says so and offers **Order by Execution**.
 
@@ -241,7 +241,7 @@ keeps the stops to the steps of that case.
 
 ## Using it with vitest
 
-Both options stop at the annotated breakpoints.
+Both options stop at the breakpoints of the steps.
 
 **Option 1: JavaScript Debug Terminal.**
 
@@ -408,17 +408,17 @@ A complete example is in `examples/sample-node/.minuet/orders/`.
 
 - The tour's content lives only in its file (see [Tour files](#tour-files)). VS Code only remembers which tour
   is open in each workspace.
-- Each annotation is linked to its breakpoint by file and line. Breakpoint ids change between sessions.
-- **Deleting the breakpoint deletes its annotation.** Deleting the annotation keeps the breakpoint.
-- If the breakpoint moves (for example, when lines are added above it), the annotation and its highlights move
+- Each step is linked to its breakpoint by file and line. Breakpoint ids change between sessions.
+- **Deleting the breakpoint deletes its step.** Deleting the step keeps the breakpoint.
+- If the breakpoint moves (for example, when lines are added above it), the step and its highlights move
   with it.
-- If the text of the line no longer matches the annotated text, the step becomes **outdated**: it shows ⚠ in the
+- If the text of the line no longer matches its anchor text, the step becomes **outdated**: it shows ⚠ in the
   panel, in the CodeLens and in Current Step, but it is not deleted. **Re-anchor** (in Current Step or in **Edit
-  Annotation**) marks it as up to date again.
+  Step**) marks it as up to date again.
 - **Removing every breakpoint of the tour at once** (for example with *Remove All Breakpoints*) closes the tour
   instead of deleting all its steps. The file is kept.
-- When VS Code starts, if an annotation has no breakpoint, the breakpoint is created again. VS Code delivers the
-  breakpoint list to extensions asynchronously; deleting the annotation at that point could wipe the whole tour
+- When VS Code starts, if a step has no breakpoint, the breakpoint is created again. VS Code delivers the
+  breakpoint list to extensions asynchronously; deleting the step at that point could wipe the whole tour
   because of a startup race.
 
 ---
@@ -428,7 +428,7 @@ A complete example is in `examples/sample-node/.minuet/orders/`.
 | Setting | Default | Description |
 | --- | --- | --- |
 | `minuet.toursFolder` | `.minuet` | Folder of the tours. Relative to the first workspace folder, or absolute. |
-| `minuet.showCodeLens` | `true` | Show `◆ Step N of M · title` above each annotated line. |
+| `minuet.showCodeLens` | `true` | Show `◆ Step N of M · title` above the line of each step. |
 | `minuet.followCursor` | `true` | Select a step when the cursor is placed on its line. |
 | `minuet.suggestExecutionOrder` | `true` | When a session ends, offer to reorder if execution went through the steps in a different order. |
 
@@ -470,32 +470,38 @@ npm run package    # builds the .vsix
 <details>
 <summary><strong>Source structure</strong></summary>
 
-| File | Responsibility |
+The code is split in layers. `src/core` is pure logic (no VS Code API, enforced by the linter), so it can be
+tested on its own; the other layers adapt it to VS Code.
+
+| Folder / file | Responsibility |
 | --- | --- |
-| `src/extension.ts` | Activation and wiring. |
-| `src/model.ts` | Data model. |
-| `src/store.ts` | The open tour in memory. |
-| `src/tourFormat.ts` | Validation and conversion of the tour JSON. |
-| `src/paths.ts` | Paths relative to the workspace. |
-| `src/reconcile.ts` | Annotation ↔ breakpoint re-association (pure logic). |
-| `src/breakpointSync.ts` | Applies the re-association on breakpoint events. |
-| `src/staleness.ts` | Outdated step detection (pure logic). |
-| `src/staleTracker.ts` | Outdated step detection (reads the documents). |
-| `src/stopController.ts` | Detects stops, finds the step, evaluates expressions and records the execution order. |
-| `src/executionOrder.ts` | Reordering by execution (pure logic). |
-| `src/decorations.ts` | Highlights and notes. |
-| `src/codeLens.ts` | CodeLens of each step. |
-| `src/selection.ts` | Selected step (panel, CodeLens, cursor or stop). |
-| `src/tourView.ts` | "Steps" view. |
-| `src/stepState.ts` | What Current Step shows (pure logic). |
-| `src/stepView.ts` | "Current Step" view (extension side). |
-| `src/webview/` | "Current Step" view (webview script and message protocol). |
-| `src/navigation.ts` | Opening a step in the editor. |
-| `src/stepPage.ts` | "Step Page" tab: a step's content (markdown or an HTML page) in an editor tab. |
-| `src/tours.ts` | Tour files: the tours folder, the "Tours" view, open, close, create, delete, write and reload. |
+| `src/extension.ts` | Activation: creates every part and wires them together. |
 | `src/commands.ts` | Commands. |
-| `src/uriHandler.ts` | `vscode://martindotts.minuet/open` URI. |
-| `src/agentSkills.ts` | Installs the skill for each agent. |
+| **`src/core/`** | **Pure logic.** |
+| `core/model.ts` | Data model: `Step`, `Content`, `TourMeta`. |
+| `core/tourFormat.ts` | Validation and conversion of the tour JSON. |
+| `core/paths.ts` | Paths relative to the workspace and the tours folder. |
+| `core/reconcile.ts` | Step ↔ breakpoint re-association. |
+| `core/staleness.ts` | Outdated step detection. |
+| `core/executionOrder.ts` | Reordering by execution. |
+| `core/lines.ts` | 0-based ↔ 1-based lines. |
+| **`src/tours/`** | **Tour files and the open tour.** |
+| `tours/tours.ts` | The tours folder: open, close, create, delete, write and reload tours. |
+| `tours/stepStore.ts` | The steps of the open tour, in memory. |
+| `tours/staleTracker.ts` | Outdated steps (reads the documents). |
+| **`src/debug/`** | **The debugger.** |
+| `debug/breakpointSync.ts` | Keeps steps attached to their breakpoints. |
+| `debug/stopController.ts` | Detects stops, finds the step, evaluates expressions and records the execution order. |
+| **`src/views/`** | **What the user sees.** |
+| `views/toursView.ts` | "Tours" view. |
+| `views/stepsView.ts` | "Steps" view. |
+| `views/currentStep/` | "Current Step" view: provider, state, message protocol and webview script. |
+| `views/stepPage.ts` | "Step Page" tab: a step's content in an editor tab. |
+| `views/decorations.ts`, `views/codeLens.ts` | Highlights, notes and the CodeLens of each step. |
+| `views/selection.ts`, `views/navigation.ts` | Selected step, and opening a step in the editor. |
+| **`src/agents/`** | **Coding agents.** |
+| `agents/agentSkills.ts` | Installs the skill for each agent. |
+| `agents/uriHandler.ts` | `vscode://martindotts.minuet/open` URI. |
 | `skills/minuet/SKILL.md` | Agent skill installed by the command (also by `npx skills add`). |
 
 </details>

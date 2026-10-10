@@ -5,7 +5,7 @@ description: Explain how a code flow works with a step-by-step tour in the VS Co
 
 # Tours with minuet
 
-minuet is a VS Code extension that adds annotations to the breakpoints of the VS Code debugger, in any language
+minuet is a VS Code extension that turns breakpoints of the VS Code debugger into explained steps, in any language
 it can debug (JavaScript/TypeScript, Python, Go, Java, C#…). Each step of a tour is a breakpoint with a title,
 an explanation (markdown, or a markdown or HTML file), highlighted ranges and expressions that are evaluated with
 the real values when execution stops there.

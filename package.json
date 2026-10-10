@@ -24,7 +24,6 @@
   "keywords": [
     "debugger",
     "breakpoints",
-    "annotations",
     "tour",
     "walkthrough",
     "javascript",
@@ -62,14 +61,14 @@
   "contributes": {
     "commands": [
       {
-        "command": "minuet.annotateLine",
-        "title": "Annotate Breakpoint on This Line",
+        "command": "minuet.addStep",
+        "title": "Add Step on This Line",
         "category": "minuet",
         "icon": "$(comment-discussion)"
       },
       {
         "command": "minuet.addHighlight",
-        "title": "Highlight Selection in Annotation...",
+        "title": "Highlight Selection in Step...",
         "category": "minuet",
         "icon": "$(symbol-color)"
       },
@@ -80,14 +79,14 @@
         "icon": "$(eye)"
       },
       {
-        "command": "minuet.editAnnotation",
-        "title": "Edit Annotation",
+        "command": "minuet.editStep",
+        "title": "Edit Step",
         "category": "minuet",
         "icon": "$(edit)"
       },
       {
-        "command": "minuet.deleteAnnotation",
-        "title": "Delete Annotation",
+        "command": "minuet.deleteStep",
+        "title": "Delete Step",
         "category": "minuet",
         "icon": "$(trash)"
       },
@@ -209,7 +208,7 @@
       ],
       "minuet.editorMenu": [
         {
-          "command": "minuet.annotateLine",
+          "command": "minuet.addStep",
           "group": "1_create@1"
         },
         {
@@ -222,17 +221,17 @@
           "group": "1_create@3"
         },
         {
-          "command": "minuet.editAnnotation",
+          "command": "minuet.editStep",
           "group": "2_edit@1"
         },
         {
-          "command": "minuet.deleteAnnotation",
+          "command": "minuet.deleteStep",
           "group": "2_edit@2"
         }
       ],
       "editor/lineNumber/context": [
         {
-          "command": "minuet.annotateLine",
+          "command": "minuet.addStep",
           "group": "minuet@1",
           "when": "resourceScheme == file"
         },
@@ -242,12 +241,12 @@
           "when": "resourceScheme == file"
         },
         {
-          "command": "minuet.editAnnotation",
+          "command": "minuet.editStep",
           "group": "minuet@3",
           "when": "resourceScheme == file"
         },
         {
-          "command": "minuet.deleteAnnotation",
+          "command": "minuet.deleteStep",
           "group": "minuet@4",
           "when": "resourceScheme == file"
         }
@@ -273,69 +272,69 @@
         {
           "command": "minuet.closeTour",
           "group": "navigation@1",
-          "when": "view == minuet.tour && minuet.hasTour"
+          "when": "view == minuet.steps && minuet.hasTour"
         },
         {
           "command": "minuet.openTourFile",
           "group": "1_tour@1",
-          "when": "view == minuet.tour && minuet.hasTour"
+          "when": "view == minuet.steps && minuet.hasTour"
         },
         {
           "command": "minuet.orderByExecution",
           "group": "1_order@1",
-          "when": "view == minuet.tour && minuet.hasTour"
+          "when": "view == minuet.steps && minuet.hasTour"
         },
         {
           "command": "minuet.installAgentSkill",
           "group": "y_agents@1",
-          "when": "view == minuet.tour"
+          "when": "view == minuet.steps"
         }
       ],
       "view/item/context": [
         {
           "command": "minuet.moveUp",
           "group": "inline@1",
-          "when": "view == minuet.tour && viewItem == step"
+          "when": "view == minuet.steps && viewItem == step"
         },
         {
           "command": "minuet.moveDown",
           "group": "inline@2",
-          "when": "view == minuet.tour && viewItem == step"
+          "when": "view == minuet.steps && viewItem == step"
         },
         {
-          "command": "minuet.editAnnotation",
+          "command": "minuet.editStep",
           "group": "inline@3",
-          "when": "view == minuet.tour && viewItem == step"
+          "when": "view == minuet.steps && viewItem == step"
         },
         {
-          "command": "minuet.deleteAnnotation",
+          "command": "minuet.deleteStep",
           "group": "inline@4",
-          "when": "view == minuet.tour && viewItem == step"
+          "when": "view == minuet.steps && viewItem == step"
         },
         {
           "command": "minuet.addWatch",
           "group": "1_edit@1",
-          "when": "view == minuet.tour && viewItem == step"
+          "when": "view == minuet.steps && viewItem == step"
         },
         {
-          "command": "minuet.editAnnotation",
+          "command": "minuet.editStep",
           "group": "1_edit@2",
-          "when": "view == minuet.tour && viewItem == step"
+          "when": "view == minuet.steps && viewItem == step"
         },
         {
           "command": "minuet.moveUp",
           "group": "2_order@1",
-          "when": "view == minuet.tour && viewItem == step"
+          "when": "view == minuet.steps && viewItem == step"
         },
         {
           "command": "minuet.moveDown",
           "group": "2_order@2",
-          "when": "view == minuet.tour && viewItem == step"
+          "when": "view == minuet.steps && viewItem == step"
         },
         {
-          "command": "minuet.deleteAnnotation",
+          "command": "minuet.deleteStep",
           "group": "3_delete@1",
-          "when": "view == minuet.tour && viewItem == step"
+          "when": "view == minuet.steps && viewItem == step"
         },
         {
           "command": "minuet.closeTour",
@@ -377,7 +376,7 @@
           "contextualTitle": "minuet"
         },
         {
-          "id": "minuet.tour",
+          "id": "minuet.steps",
           "name": "Steps",
           "icon": "media/tour.svg",
           "contextualTitle": "minuet"
@@ -386,7 +385,7 @@
       "debug": [
         {
           "type": "webview",
-          "id": "minuet.step",
+          "id": "minuet.currentStep",
           "name": "Current Step",
           "contextualTitle": "minuet",
           "visibility": "visible"
@@ -405,8 +404,8 @@
         "when": "workspaceFolderCount > 0"
       },
       {
-        "view": "minuet.tour",
-        "contents": "No tour is open. Pick one in Tours, or right-click a line number → **Annotate Breakpoint on This Line** to start one."
+        "view": "minuet.steps",
+        "contents": "No tour is open. Pick one in Tours, or right-click a line number → **Add Step on This Line** to start one."
       }
     ],
     "colors": [
@@ -452,12 +451,12 @@
         "minuet.showCodeLens": {
           "type": "boolean",
           "default": true,
-          "description": "Show \"◆ Step N of M · title\" above each annotated line. Clicking it shows the step in Current Step."
+          "description": "Show \"◆ Step N of M · title\" above the line of each step. Clicking it shows the step in Current Step."
         },
         "minuet.followCursor": {
           "type": "boolean",
           "default": true,
-          "description": "When the cursor is placed on an annotated line, select that step in Tour and Current Step."
+          "description": "When the cursor is placed on the line of a step, select that step in Steps and Current Step."
         },
         "minuet.toursFolder": {
           "type": "string",
