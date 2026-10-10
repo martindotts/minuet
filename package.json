@@ -4,6 +4,7 @@
   "description": "Step-by-step debugging, explained: your AI agent turns breakpoints into a guided tour of any JavaScript/TypeScript flow, with the real values of the run.",
   "version": "0.1.0",
   "publisher": "martinthompson",
+  "icon": "media/icon.png",
   "author": {
     "name": "Martin Thompson"
   },
