@@ -25,7 +25,7 @@
   <a href="https://github.com/martindotts/minuet/releases">Releases</a>
 </p>
 
-https://github.com/user-attachments/assets/d38762ac-a22c-4973-9ae1-11c73698d4cd
+https://github.com/user-attachments/assets/e18ee8c6-82ed-4160-a0fb-61cf80e0e66f
 
 ---
 
