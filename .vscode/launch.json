@@ -22,10 +22,10 @@
       "type": "pickString",
       "description": "Sample project to open in the development window",
       "options": [
-        { "label": "Node.js (examples/sample-node)", "value": "sample-node" },
+        { "label": "Checkout, TypeScript (examples/checkout)", "value": "checkout" },
         { "label": "Python (examples/sample-python)", "value": "sample-python" }
       ],
-      "default": "sample-node"
+      "default": "checkout"
     }
   ]
 }

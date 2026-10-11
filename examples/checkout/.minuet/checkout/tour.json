@@ -1,0 +1,113 @@
+{
+  "version": 1,
+  "title": "How checkout works",
+  "context": {
+    "file": "context.html"
+  },
+  "run": {
+    "type": "node",
+    "request": "launch",
+    "runtimeArgs": [
+      "--test"
+    ],
+    "program": "${workspaceFolder}/test/checkout.test.ts",
+    "skipFiles": [
+      "<node_internals>/**"
+    ],
+    "console": "integratedTerminal"
+  },
+  "steps": [
+    {
+      "order": 1,
+      "file": "src/checkout.ts",
+      "line": 12,
+      "anchorText": "const subtotal = subtotalOf(order.items);",
+      "title": "An order comes in",
+      "content": "`checkout` builds the receipt in four parts: subtotal, coupon, shipping and total. Expand `order.items` to see what this order brings.",
+      "highlights": [
+        {
+          "startLine": 11,
+          "endLine": 17,
+          "note": "the four parts"
+        }
+      ],
+      "watches": [
+        "order.items",
+        "order.couponCode"
+      ]
+    },
+    {
+      "order": 2,
+      "file": "src/cart.ts",
+      "line": 11,
+      "anchorText": "return subtotal;",
+      "title": "Subtotal",
+      "content": "Every item counts: 120 + 50 = **170**.",
+      "watches": [
+        "subtotal"
+      ]
+    },
+    {
+      "order": 3,
+      "file": "src/promotions.ts",
+      "line": 17,
+      "anchorText": "if (eligibleTotal < coupon.minSpend) {",
+      "title": "The coupon counts eligible items",
+      "content": {
+        "file": "coupon.html"
+      },
+      "highlights": [
+        {
+          "startLine": 11,
+          "endLine": 11,
+          "note": "20% off, from 100, no gift cards"
+        },
+        {
+          "startLine": 15,
+          "endLine": 16,
+          "note": "only eligible items count"
+        }
+      ],
+      "watches": [
+        "eligible",
+        "eligibleTotal",
+        "coupon"
+      ]
+    },
+    {
+      "order": 4,
+      "file": "src/shipping.ts",
+      "line": 6,
+      "anchorText": "if (subtotal >= FREE_SHIPPING_FROM) {",
+      "title": "Free shipping from 100",
+      "content": "Shipping looks at the whole subtotal, **170**: free from 100, otherwise 8.",
+      "highlights": [
+        {
+          "startLine": 4,
+          "endLine": 4,
+          "note": "every item counts here"
+        }
+      ],
+      "watches": [
+        "subtotal",
+        "FREE_SHIPPING_FROM"
+      ]
+    },
+    {
+      "order": 5,
+      "file": "src/checkout.ts",
+      "line": 16,
+      "anchorText": "return { subtotal, discount: coupon.discount, couponNote: coupon.reason, shipping, total };",
+      "title": "The receipt",
+      "content": {
+        "file": "receipt.html"
+      },
+      "watches": [
+        "subtotal",
+        "coupon.discount",
+        "shipping",
+        "total"
+      ]
+    }
+  ]
+}

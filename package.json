@@ -508,7 +508,7 @@
     "check-types": "tsc --noEmit",
     "lint": "eslint src",
     "compile-tests": "node -e \"require('fs').rmSync('out',{recursive:true,force:true})\" && tsc -p . --outDir out",
-    "test": "pnpm run compile-tests && pnpm run compile && vscode-test --label js",
+    "test": "pnpm run compile-tests && pnpm run compile && vscode-test --label js --label example",
     "test:python": "pnpm run compile-tests && pnpm run compile && vscode-test --label python"
   },
   "devDependencies": {

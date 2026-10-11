@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <p><code>checkout()</code> turns an order into a receipt, one part at a time:</p>
+
+  <svg viewBox="0 0 440 76" role="img" aria-label="Cart, subtotal, coupon, shipping, total">
+    <rect x="1" y="8" width="70" height="34" rx="6" class="box" />
+    <text x="36" y="30" class="box-text">Cart</text>
+    <line x1="71" y1="25" x2="92" y2="25" class="arrow" />
+
+    <rect x="93" y="8" width="70" height="34" rx="6" class="box" />
+    <text x="128" y="30" class="box-text">Subtotal</text>
+    <text x="128" y="62" class="file">cart.ts</text>
+    <line x1="163" y1="25" x2="184" y2="25" class="arrow" />
+
+    <rect x="185" y="8" width="70" height="34" rx="6" class="box coupon" />
+    <text x="220" y="30" class="box-text">Coupon</text>
+    <text x="220" y="62" class="file">promotions.ts</text>
+    <line x1="255" y1="25" x2="276" y2="25" class="arrow" />
+
+    <rect x="277" y="8" width="70" height="34" rx="6" class="box shipping" />
+    <text x="312" y="30" class="box-text">Shipping</text>
+    <text x="312" y="62" class="file">shipping.ts</text>
+    <line x1="347" y1="25" x2="368" y2="25" class="arrow" />
+
+    <rect x="369" y="8" width="70" height="34" rx="6" class="box total" />
+    <text x="404" y="30" class="box-text">Total</text>
+    <text x="404" y="62" class="file">checkout.ts</text>
+  </svg>
+
+  <p>
+    The tour runs the test with a sample order, headphones (120) and a gift card (50) with the coupon
+    <code>SAVE20</code>, and stops at each part with its real values.
+  </p>
+  <p class="note">Click ▶ to run it, then F5 to go from step to step.</p>
+</body>
+</html>

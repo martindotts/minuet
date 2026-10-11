@@ -1,0 +1,9 @@
+{
+  "name": "orders-fixture",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Fixture of the integration tests: keep its lines and values stable.",
+  "scripts": {
+    "test": "node --test"
+  }
+}

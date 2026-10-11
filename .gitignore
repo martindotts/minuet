@@ -3,5 +3,4 @@ dist/
 out/
 .vscode-test/
 *.vsix
-examples/sample-node/node_modules/
 __pycache__/

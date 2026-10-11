@@ -14,7 +14,7 @@ import {
   TourFile,
 } from '../../core/tourFormat';
 
-const SAMPLE_TOUR = path.resolve(__dirname, '../../../examples/sample-node/.minuet/orders/tour.json');
+const SAMPLE_TOUR = path.resolve(__dirname, '../../../src/test/fixtures/orders/.minuet/orders/tour.json');
 
 function validTour(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {

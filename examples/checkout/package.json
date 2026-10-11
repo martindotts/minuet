@@ -1,0 +1,9 @@
+{
+  "name": "checkout-example",
+  "private": true,
+  "description": "The minuet showcase: how a checkout total is calculated. Node runs the TypeScript directly (22.18 or later).",
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  }
+}

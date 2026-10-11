@@ -26,7 +26,7 @@ async function waitFor<T>(
 
 function folder(): vscode.WorkspaceFolder {
   const f = vscode.workspace.workspaceFolders?.[0];
-  assert.ok(f, 'the tests run with examples/sample-node as workspace');
+  assert.ok(f, 'the tests run with src/test/fixtures/orders as workspace');
   return f;
 }
 

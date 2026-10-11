@@ -43,7 +43,7 @@
 
 3. **Ask your agent:**
 
-   > Explain with minuet how the order confirmation email is built
+   > Explain with minuet how checkout works
 
 4. **Run it.** Accept opening the tour and click ▶ on it in **Tours**: it runs the test the agent picked in the
    debugger. Each stop shows the step,
@@ -108,7 +108,7 @@ it creates a temporary one and tells you. You accept opening the tour and run th
    ```bash
    npx skills add martindotts/minuet -g
    ```
-2. **Ask the agent**, for example: *"Explain with minuet how the order confirmation email is built"*.
+2. **Ask the agent**, for example: *"Explain with minuet how checkout works"*.
 3. **The agent opens the tour** through a URI of the extension. VS Code always asks you to confirm first. If the
    agent edits the file later (to fix or add a step), the open tour reloads by itself.
 
@@ -413,7 +413,7 @@ steps[3].file: file "src/foo.ts" does not exist (looked for /path/to/workspace/s
    in the view.
 7. Avoid expressions with side effects (calls that change state). They are evaluated in the real run.
 
-A complete example is in `examples/sample-node/.minuet/orders/`.
+A complete example is in `examples/checkout/.minuet/checkout/`.
 
 ---
 
@@ -455,17 +455,18 @@ Colors can be changed in `workbench.colorCustomizations`:
 
 ## Sample project
 
-`examples/sample-node` has a module (`src/orders.js`) that builds the notification text of an order, a test
-(`node --test`) and a 5-step tour (`.minuet/orders/`): its context is a `.md` file and step 3 is explained in
-an HTML page with a table and an SVG diagram.
+`examples/checkout` is a small TypeScript checkout (cart, coupon, shipping) with a test, and the tour an agent
+would build when asked how it works. The tour has 5 steps across 4 files and runs the test with a sample order:
+its context is a diagram of the flow, the coupon step shows which items it counts, and the last step draws the
+receipt. The real values at each stop match the pictures.
 
-1. Press **F5** in this project and pick **Node.js**. A development window opens with the sample.
-2. **Tours** → click *How the order notification text is built*.
-3. Click ▶ on the tour (it runs `node --test` under the debugger).
+1. Press **F5** in this project and pick **Checkout**. A development window opens with the example.
+2. **Tours** → click *How checkout works*.
+3. Click ▶ on the tour (it runs the test under the debugger; Node runs the TypeScript directly, 22.18 or later).
 4. Execution stops at each step. **Continue** (F5) moves to the next one.
 
-`examples/sample-python` has the same flow in Python (`orders.py`, a `unittest` test and its tour). To try it,
-press **F5** and pick **Python**; the Python extension must be installed in VS Code.
+`examples/sample-python` shows a tour in Python (`orders.py`, a `unittest` test and its tour). To try it, press
+**F5** and pick **Python**; the Python extension must be installed in VS Code.
 
 ---
 
@@ -475,7 +476,7 @@ press **F5** and pick **Python**; the Python extension must be installed in VS C
 pnpm install
 pnpm compile         # types + lint + bundle (dist/extension.js, dist/webview.js)
 pnpm lint
-pnpm test            # unit and integration tests (includes a real debug session of the Node.js sample)
+pnpm test            # unit and integration tests (real debug sessions of the test fixture and of examples/checkout)
 pnpm test:python     # a real debugpy session of examples/sample-python (needs python3; installs the debugger)
 pnpm package         # builds the .vsix
 ```
