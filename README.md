@@ -25,6 +25,10 @@
   <a href="https://github.com/martindotts/minuet/releases">Releases</a>
 </p>
 
+<p align="center">
+  <a href="media/demo.mp4"><strong>▶ Watch the demo</strong></a> (43 s)
+</p>
+
 ---
 
 ## Quick start

@@ -15,3 +15,4 @@ tsconfig.json
 .github/**
 pnpm-lock.yaml
 pnpm-workspace.yaml
+media/demo.mp4
