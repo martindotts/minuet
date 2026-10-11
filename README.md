@@ -25,9 +25,7 @@
   <a href="https://github.com/martindotts/minuet/releases">Releases</a>
 </p>
 
-<p align="center">
-  <a href="media/demo.mp4"><strong>▶ Watch the demo</strong></a> (43 s)
-</p>
+https://github.com/user-attachments/assets/d38762ac-a22c-4973-9ae1-11c73698d4cd
 
 ---
 
