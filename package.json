@@ -2,7 +2,7 @@
   "name": "minuet",
   "displayName": "minuet",
   "description": "Step-by-step debugging, explained: your AI agent turns breakpoints into a guided tour of any code flow, with the real values of the run.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "publisher": "martindotts",
   "icon": "media/icon.png",
   "author": {
